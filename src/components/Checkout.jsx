@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, MapPin, User, Send, Clock, LocateFixed } from 'lucide-react'
+import { X, MapPin, User, Send, Clock, LocateFixed, Copy, Check, CreditCard } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { supabase } from '../lib/supabase'
 
@@ -8,6 +8,9 @@ export default function Checkout({ isOpen, onClose }) {
     const { cart, cartTotal, clearCart } = useCart()
     const [isSaving, setIsSaving] = useState(false)
     const [isLoadingLocation, setIsLoadingLocation] = useState(false)
+    const [orderSuccess, setOrderSuccess] = useState(false)
+    const [copiedPix, setCopiedPix] = useState(false)
+    const [pixSettings, setPixSettings] = useState(null)
     const [formData, setFormData] = useState({
         nome: '',
         whatsapp: '',
@@ -24,6 +27,32 @@ export default function Checkout({ isOpen, onClose }) {
     })
 
     const PIZZARIA_WHATSAPP = "5586994471909"
+
+    useEffect(() => {
+        if (isOpen) {
+            fetchPixSettings()
+        } else {
+            // Reset states when modal re-opens
+            setOrderSuccess(false)
+            setCopiedPix(false)
+        }
+    }, [isOpen])
+
+    const fetchPixSettings = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('store_settings')
+                .select('*')
+                .eq('key', 'pix_config')
+                .single()
+
+            if (data && data.value) {
+                setPixSettings(data.value)
+            }
+        } catch (error) {
+            console.error('Error fetching PIX settings:', error)
+        }
+    }
 
     const checkBusinessHours = () => {
         const now = new Date()
@@ -112,6 +141,19 @@ export default function Checkout({ isOpen, onClose }) {
             timeout: 10000,
             maximumAge: 0
         })
+    }
+
+    const handleCopyPix = () => {
+        if (pixSettings?.pix_key) {
+            navigator.clipboard.writeText(pixSettings.pix_key)
+            setCopiedPix(true)
+            setTimeout(() => setCopiedPix(false), 2000)
+        }
+    }
+
+    const handleFinish = () => {
+        clearCart()
+        onClose()
     }
 
     const handleSendOrder = async (e) => {
@@ -212,9 +254,8 @@ export default function Checkout({ isOpen, onClose }) {
             const encoded = encodeURIComponent(message)
             window.open(`https://wa.me/${PIZZARIA_WHATSAPP}?text=${encoded}`, '_blank')
 
-            // 4. Cleanup
-            clearCart()
-            onClose()
+            // 4. Show success screen
+            setOrderSuccess(true)
         } catch (error) {
             console.error('Error saving order:', error)
             alert('Ops! Tivemos um problema ao processar seu pedido. Por favor, tente novamente.')
@@ -241,287 +282,346 @@ export default function Checkout({ isOpen, onClose }) {
                         exit={{ scale: 0.9, opacity: 0, y: 20 }}
                         className="relative bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
                     >
-                        {/* Header */}
-                        <div className="p-6 bg-primary text-white flex justify-between items-center">
-                            <div>
-                                <h2 className="text-xl font-black uppercase italic tracking-tighter">Finalizar Pedido</h2>
-                                <p className="text-xs text-secondary font-bold uppercase tracking-widest mt-1">Quase lá! Só precisamos do endereço.</p>
-                            </div>
-                            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-                                <X className="w-6 h-6" />
-                            </button>
-                        </div>
-
-                        {/* Form */}
-                        <form onSubmit={handleSendOrder} className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide">
-                            {/* Identificação */}
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-2 text-primary">
-                                    <User className="w-5 h-5" />
-                                    <h3 className="font-black uppercase italic text-sm tracking-wider">Identificação</h3>
+                        {orderSuccess ? (
+                            <div className="p-8 flex flex-col items-center justify-center text-center h-full space-y-6">
+                                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-2">
+                                    <Check className="w-10 h-10" />
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest ml-1">Seu Nome</label>
-                                        <input
-                                            required
-                                            type="text"
-                                            value={formData.nome}
-                                            onChange={e => setFormData({ ...formData, nome: e.target.value })}
-                                            className="w-full bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary transition-all font-medium"
-                                            placeholder="Como podemos te chamar?"
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest ml-1">WhatsApp</label>
-                                        <input
-                                            required
-                                            type="tel"
-                                            value={formData.whatsapp}
-                                            onChange={e => setFormData({ ...formData, whatsapp: e.target.value })}
-                                            className="w-full bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary transition-all font-medium"
-                                            placeholder="(86) 9...."
-                                        />
-                                    </div>
-                                </div>
-                            </div>
+                                <h2 className="text-2xl font-black uppercase italic tracking-tighter text-zinc-800">Pedido Enviado!</h2>
+                                <p className="text-zinc-500 font-medium">Seu pedido foi registrado e enviado para nosso WhatsApp.</p>
 
-                            {/* Endereço */}
-                            <div className="space-y-4 pt-4 border-t border-zinc-100">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2 text-primary">
-                                        <MapPin className="w-5 h-5" />
-                                        <h3 className="font-black uppercase italic text-sm tracking-wider">Endereço de Entrega</h3>
+                                {formData.paymentMethod === 'pix' && pixSettings && (
+                                    <div className="w-full bg-zinc-50 border-2 border-dashed border-zinc-200 rounded-2xl p-6 space-y-4">
+                                        <div className="flex items-center justify-center gap-2 text-primary font-black uppercase tracking-wider text-sm">
+                                            <CreditCard className="w-5 h-5" />
+                                            <span>Pagamento via PIX</span>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Banco</p>
+                                            <p className="font-bold text-zinc-800">{pixSettings.bank_name}</p>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Titular</p>
+                                            <p className="font-bold text-zinc-800">{pixSettings.holder_name}</p>
+                                        </div>
+
+                                        <div className="pt-2">
+                                            <div className="flex items-center gap-2 bg-white border border-zinc-200 p-3 rounded-xl">
+                                                <div className="flex-1 overflow-hidden">
+                                                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-0.5">Chave PIX ({pixSettings.key_type})</p>
+                                                    <p className="font-mono text-sm font-bold text-zinc-800 truncate">{pixSettings.pix_key}</p>
+                                                </div>
+                                                <button
+                                                    onClick={handleCopyPix}
+                                                    className="p-2 hover:bg-zinc-100 rounded-lg transition-colors text-zinc-600 active:scale-95"
+                                                    title="Copiar chave"
+                                                >
+                                                    {copiedPix ? <Check className="w-5 h-5 text-green-500" /> : <Copy className="w-5 h-5" />}
+                                                </button>
+                                            </div>
+                                            {copiedPix && <span className="text-[10px] font-bold text-green-600 mt-1 block">Chave copiada!</span>}
+                                        </div>
+
+                                        <div className="bg-primary/10 text-primary p-3 rounded-xl text-xs font-bold leading-relaxed">
+                                            ⚠️ Importante: Envie o comprovante no WhatsApp que abriu para confirmarmos seu pedido mais rápido!
+                                        </div>
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={handleGetLocation}
-                                        disabled={isLoadingLocation}
-                                        className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-1 hover:bg-primary/5 px-2 py-1 rounded-lg transition-colors"
-                                    >
-                                        {isLoadingLocation ? (
-                                            <span className="block w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin"></span>
-                                        ) : (
-                                            <LocateFixed className="w-3 h-3" />
-                                        )}
-                                        {isLoadingLocation ? 'Buscando...' : 'Usar Localização Atual'}
+                                )}
+
+                                <button
+                                    onClick={handleFinish}
+                                    className="w-full py-4 bg-zinc-900 text-white rounded-xl font-black uppercase tracking-widest hover:bg-zinc-800 transition-colors"
+                                >
+                                    Fechar e Voltar ao Cardápio
+                                </button>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Header */}
+                                <div className="p-6 bg-primary text-white flex justify-between items-center">
+                                    <div>
+                                        <h2 className="text-xl font-black uppercase italic tracking-tighter">Finalizar Pedido</h2>
+                                        <p className="text-xs text-secondary font-bold uppercase tracking-widest mt-1">Quase lá! Só precisamos do endereço.</p>
+                                    </div>
+                                    <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                                        <X className="w-6 h-6" />
                                     </button>
                                 </div>
 
-                                <div className="space-y-4">
-                                    <div className="grid grid-cols-4 gap-4">
-                                        <div className="col-span-3 space-y-1">
-                                            <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest ml-1">Rua / Avenida</label>
-                                            <input
-                                                required
-                                                type="text"
-                                                value={formData.endereco}
-                                                onChange={e => setFormData({ ...formData, endereco: e.target.value })}
-                                                className="w-full bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary transition-all font-medium"
-                                                placeholder="Nome da rua"
-                                            />
+                                {/* Form */}
+                                <form onSubmit={handleSendOrder} className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide">
+                                    {/* Identificação */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2 text-primary">
+                                            <User className="w-5 h-5" />
+                                            <h3 className="font-black uppercase italic text-sm tracking-wider">Identificação</h3>
                                         </div>
-                                        <div className="col-span-1 space-y-1">
-                                            <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest ml-1">Nº</label>
-                                            <input
-                                                required
-                                                type="text"
-                                                value={formData.numero}
-                                                onChange={e => setFormData({ ...formData, numero: e.target.value })}
-                                                className="w-full bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary transition-all font-medium"
-                                                placeholder="123"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest ml-1">Bairro</label>
-                                            <input
-                                                required
-                                                type="text"
-                                                value={formData.bairro}
-                                                onChange={e => setFormData({ ...formData, bairro: e.target.value })}
-                                                className="w-full bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary transition-all font-medium"
-                                                placeholder="Ex: Centro"
-                                            />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest ml-1">Referência (Opcional)</label>
-                                            <input
-                                                type="text"
-                                                value={formData.pontoReferencia}
-                                                onChange={e => setFormData({ ...formData, pontoReferencia: e.target.value })}
-                                                className="w-full bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary transition-all font-medium"
-                                                placeholder="Perto de onde?"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {formData.locationLink && (
-                                        <div className="bg-green-50 px-3 py-2 rounded-lg flex items-center gap-2 text-xs text-green-700 animate-in fade-in slide-in-from-top-1">
-                                            <LocateFixed className="w-3 h-3" />
-                                            <span className="font-bold">Localização anexada ao pedido! ({formData.locationLink})</span>
-                                            <button
-                                                type="button"
-                                                onClick={() => setFormData({ ...formData, locationLink: '' })}
-                                                className="ml-auto text-green-600 hover:text-green-800"
-                                            >
-                                                <X className="w-3 h-3" />
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Pagamento */}
-                            <div className="space-y-4 pt-4 border-t border-zinc-100">
-                                <div className="flex items-center gap-2 text-primary">
-                                    <div className="text-xl font-black">$</div>
-                                    <h3 className="font-black uppercase italic text-sm tracking-wider">Forma de Pagamento</h3>
-                                </div>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {['pix', 'dinheiro', 'cartao'].map(method => (
-                                        <label
-                                            key={method}
-                                            className={`p-4 rounded-2xl border-2 flex flex-col items-center justify-center gap-1 cursor-pointer transition-all ${formData.paymentMethod === method
-                                                ? 'border-primary bg-primary/5 ring-2 ring-primary/10'
-                                                : 'border-zinc-100 bg-zinc-50 hover:border-zinc-200'
-                                                }`}
-                                        >
-                                            <input
-                                                type="radio"
-                                                name="paymentMethod"
-                                                value={method}
-                                                checked={formData.paymentMethod === method}
-                                                onChange={e => setFormData({ ...formData, paymentMethod: e.target.value })}
-                                                className="hidden"
-                                            />
-                                            <span className="text-lg">
-                                                {method === 'pix' && '💠'}
-                                                {method === 'dinheiro' && '💵'}
-                                                {method === 'cartao' && '💳'}
-                                            </span>
-                                            <span className="text-[10px] font-black uppercase tracking-wider">
-                                                {method === 'cartao' ? 'Cartão' : method}
-                                            </span>
-                                        </label>
-                                    ))}
-                                </div>
-
-                                {formData.paymentMethod === 'dinheiro' && (
-                                    <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 space-y-3 animate-in fade-in slide-in-from-top-2">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs font-bold text-orange-900 uppercase">Precisa de troco?</span>
-                                            <div className="flex gap-2">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setFormData({ ...formData, needChange: false })}
-                                                    className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-colors ${!formData.needChange ? 'bg-orange-500 text-white' : 'bg-white text-orange-500'}`}
-                                                >
-                                                    Não
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setFormData({ ...formData, needChange: true })}
-                                                    className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-colors ${formData.needChange ? 'bg-orange-500 text-white' : 'bg-white text-orange-500'}`}
-                                                >
-                                                    Sim
-                                                </button>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest ml-1">Seu Nome</label>
+                                                <input
+                                                    required
+                                                    type="text"
+                                                    value={formData.nome}
+                                                    onChange={e => setFormData({ ...formData, nome: e.target.value })}
+                                                    className="w-full bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary transition-all font-medium"
+                                                    placeholder="Como podemos te chamar?"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest ml-1">WhatsApp</label>
+                                                <input
+                                                    required
+                                                    type="tel"
+                                                    value={formData.whatsapp}
+                                                    onChange={e => setFormData({ ...formData, whatsapp: e.target.value })}
+                                                    className="w-full bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary transition-all font-medium"
+                                                    placeholder="(86) 9...."
+                                                />
                                             </div>
                                         </div>
+                                    </div>
 
-                                        {formData.needChange && (
-                                            <div className="space-y-1">
-                                                <label className="text-[10px] font-black uppercase text-orange-400 tracking-widest ml-1">Troco para quanto?</label>
-                                                <div className="relative">
-                                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-500 font-bold">R$</span>
+                                    {/* Endereço */}
+                                    <div className="space-y-4 pt-4 border-t border-zinc-100">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2 text-primary">
+                                                <MapPin className="w-5 h-5" />
+                                                <h3 className="font-black uppercase italic text-sm tracking-wider">Endereço de Entrega</h3>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={handleGetLocation}
+                                                disabled={isLoadingLocation}
+                                                className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-1 hover:bg-primary/5 px-2 py-1 rounded-lg transition-colors"
+                                            >
+                                                {isLoadingLocation ? (
+                                                    <span className="block w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin"></span>
+                                                ) : (
+                                                    <LocateFixed className="w-3 h-3" />
+                                                )}
+                                                {isLoadingLocation ? 'Buscando...' : 'Usar Localização Atual'}
+                                            </button>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <div className="grid grid-cols-4 gap-4">
+                                                <div className="col-span-3 space-y-1">
+                                                    <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest ml-1">Rua / Avenida</label>
                                                     <input
-                                                        type="number"
-                                                        value={formData.changeFor}
-                                                        onChange={e => setFormData({ ...formData, changeFor: e.target.value })}
-                                                        className="w-full bg-white border border-orange-100 rounded-xl pl-10 pr-4 py-2 outline-none focus:ring-2 focus:ring-orange-200 text-orange-900 font-bold"
-                                                        placeholder="0.00"
+                                                        required
+                                                        type="text"
+                                                        value={formData.endereco}
+                                                        onChange={e => setFormData({ ...formData, endereco: e.target.value })}
+                                                        className="w-full bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary transition-all font-medium"
+                                                        placeholder="Nome da rua"
+                                                    />
+                                                </div>
+                                                <div className="col-span-1 space-y-1">
+                                                    <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest ml-1">Nº</label>
+                                                    <input
+                                                        required
+                                                        type="text"
+                                                        value={formData.numero}
+                                                        onChange={e => setFormData({ ...formData, numero: e.target.value })}
+                                                        className="w-full bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary transition-all font-medium"
+                                                        placeholder="123"
                                                     />
                                                 </div>
                                             </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="space-y-1">
+                                                    <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest ml-1">Bairro</label>
+                                                    <input
+                                                        required
+                                                        type="text"
+                                                        value={formData.bairro}
+                                                        onChange={e => setFormData({ ...formData, bairro: e.target.value })}
+                                                        className="w-full bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary transition-all font-medium"
+                                                        placeholder="Ex: Centro"
+                                                    />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest ml-1">Referência (Opcional)</label>
+                                                    <input
+                                                        type="text"
+                                                        value={formData.pontoReferencia}
+                                                        onChange={e => setFormData({ ...formData, pontoReferencia: e.target.value })}
+                                                        className="w-full bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary transition-all font-medium"
+                                                        placeholder="Perto de onde?"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {formData.locationLink && (
+                                                <div className="bg-green-50 px-3 py-2 rounded-lg flex items-center gap-2 text-xs text-green-700 animate-in fade-in slide-in-from-top-1">
+                                                    <LocateFixed className="w-3 h-3" />
+                                                    <span className="font-bold">Localização anexada ao pedido! ({formData.locationLink})</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setFormData({ ...formData, locationLink: '' })}
+                                                        className="ml-auto text-green-600 hover:text-green-800"
+                                                    >
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Pagamento */}
+                                    <div className="space-y-4 pt-4 border-t border-zinc-100">
+                                        <div className="flex items-center gap-2 text-primary">
+                                            <div className="text-xl font-black">$</div>
+                                            <h3 className="font-black uppercase italic text-sm tracking-wider">Forma de Pagamento</h3>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {['pix', 'dinheiro', 'cartao'].map(method => (
+                                                <label
+                                                    key={method}
+                                                    className={`p-4 rounded-2xl border-2 flex flex-col items-center justify-center gap-1 cursor-pointer transition-all ${formData.paymentMethod === method
+                                                        ? 'border-primary bg-primary/5 ring-2 ring-primary/10'
+                                                        : 'border-zinc-100 bg-zinc-50 hover:border-zinc-200'
+                                                        }`}
+                                                >
+                                                    <input
+                                                        type="radio"
+                                                        name="paymentMethod"
+                                                        value={method}
+                                                        checked={formData.paymentMethod === method}
+                                                        onChange={e => setFormData({ ...formData, paymentMethod: e.target.value })}
+                                                        className="hidden"
+                                                    />
+                                                    <span className="text-lg">
+                                                        {method === 'pix' && '💠'}
+                                                        {method === 'dinheiro' && '💵'}
+                                                        {method === 'cartao' && '💳'}
+                                                    </span>
+                                                    <span className="text-[10px] font-black uppercase tracking-wider">
+                                                        {method === 'cartao' ? 'Cartão' : method}
+                                                    </span>
+                                                </label>
+                                            ))}
+                                        </div>
+
+                                        {formData.paymentMethod === 'dinheiro' && (
+                                            <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 space-y-3 animate-in fade-in slide-in-from-top-2">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs font-bold text-orange-900 uppercase">Precisa de troco?</span>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setFormData({ ...formData, needChange: false })}
+                                                            className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-colors ${!formData.needChange ? 'bg-orange-500 text-white' : 'bg-white text-orange-500'}`}
+                                                        >
+                                                            Não
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setFormData({ ...formData, needChange: true })}
+                                                            className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-colors ${formData.needChange ? 'bg-orange-500 text-white' : 'bg-white text-orange-500'}`}
+                                                        >
+                                                            Sim
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                {formData.needChange && (
+                                                    <div className="space-y-1">
+                                                        <label className="text-[10px] font-black uppercase text-orange-400 tracking-widest ml-1">Troco para quanto?</label>
+                                                        <div className="relative">
+                                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-500 font-bold">R$</span>
+                                                            <input
+                                                                type="number"
+                                                                value={formData.changeFor}
+                                                                onChange={e => setFormData({ ...formData, changeFor: e.target.value })}
+                                                                className="w-full bg-white border border-orange-100 rounded-xl pl-10 pr-4 py-2 outline-none focus:ring-2 focus:ring-orange-200 text-orange-900 font-bold"
+                                                                placeholder="0.00"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
-                                )}
-                            </div>
 
-                            {/* Agendamento */}
-                            <div className="space-y-4 pt-4 border-t border-zinc-100">
-                                <div className="flex items-center gap-2 text-primary">
-                                    <Clock className="w-5 h-5" />
-                                    <h3 className="font-black uppercase italic text-sm tracking-wider">Agendamento</h3>
-                                </div>
-                                <div className="flex gap-4">
-                                    <label className={`flex-1 p-4 rounded-2xl border-2 transition-all cursor-pointer ${formData.tipoEntrega === 'imediata' ? 'border-primary bg-primary/5' : 'border-zinc-100 bg-zinc-50 opacity-60'}`}>
-                                        <input
-                                            type="radio"
-                                            className="hidden"
-                                            value="imediata"
-                                            checked={formData.tipoEntrega === 'imediata'}
-                                            onChange={e => setFormData({ ...formData, tipoEntrega: e.target.value })}
-                                        />
-                                        <span className="block font-black text-xs uppercase tracking-tighter">Imediata</span>
-                                        <span className="block text-[10px] text-zinc-500 font-bold uppercase mt-1 italic text-secondary">O mais rápido</span>
-                                        <span className="block text-[10px] text-zinc-400 font-bold mt-0.5">Previsão: 45min - 1h30min</span>
-                                    </label>
-                                    <label className={`flex-1 p-4 rounded-2xl border-2 transition-all cursor-pointer ${formData.tipoEntrega === 'agendada' ? 'border-primary bg-primary/5' : 'border-zinc-100 bg-zinc-50 opacity-60'}`}>
-                                        <input
-                                            type="radio"
-                                            className="hidden"
-                                            value="agendada"
-                                            checked={formData.tipoEntrega === 'agendada'}
-                                            onChange={e => setFormData({ ...formData, tipoEntrega: e.target.value })}
-                                        />
-                                        <span className="block font-black text-xs uppercase tracking-tighter">Agendar</span>
-                                        <input
-                                            type="time"
-                                            disabled={formData.tipoEntrega !== 'agendada'}
-                                            value={formData.horarioAgendado}
-                                            onChange={e => setFormData({ ...formData, horarioAgendado: e.target.value })}
-                                            className="mt-1 bg-transparent w-full text-xs font-bold focus:outline-none"
-                                        />
-                                    </label>
-                                </div>
-                            </div>
+                                    {/* Agendamento */}
+                                    <div className="space-y-4 pt-4 border-t border-zinc-100">
+                                        <div className="flex items-center gap-2 text-primary">
+                                            <Clock className="w-5 h-5" />
+                                            <h3 className="font-black uppercase italic text-sm tracking-wider">Agendamento</h3>
+                                        </div>
+                                        <div className="flex gap-4">
+                                            <label className={`flex-1 p-4 rounded-2xl border-2 transition-all cursor-pointer ${formData.tipoEntrega === 'imediata' ? 'border-primary bg-primary/5' : 'border-zinc-100 bg-zinc-50 opacity-60'}`}>
+                                                <input
+                                                    type="radio"
+                                                    className="hidden"
+                                                    value="imediata"
+                                                    checked={formData.tipoEntrega === 'imediata'}
+                                                    onChange={e => setFormData({ ...formData, tipoEntrega: e.target.value })}
+                                                />
+                                                <span className="block font-black text-xs uppercase tracking-tighter">Imediata</span>
+                                                <span className="block text-[10px] text-zinc-500 font-bold uppercase mt-1 italic text-secondary">O mais rápido</span>
+                                                <span className="block text-[10px] text-zinc-400 font-bold mt-0.5">Previsão: 45min - 1h30min</span>
+                                            </label>
+                                            <label className={`flex-1 p-4 rounded-2xl border-2 transition-all cursor-pointer ${formData.tipoEntrega === 'agendada' ? 'border-primary bg-primary/5' : 'border-zinc-100 bg-zinc-50 opacity-60'}`}>
+                                                <input
+                                                    type="radio"
+                                                    className="hidden"
+                                                    value="agendada"
+                                                    checked={formData.tipoEntrega === 'agendada'}
+                                                    onChange={e => setFormData({ ...formData, tipoEntrega: e.target.value })}
+                                                />
+                                                <span className="block font-black text-xs uppercase tracking-tighter">Agendar</span>
+                                                <input
+                                                    type="time"
+                                                    disabled={formData.tipoEntrega !== 'agendada'}
+                                                    value={formData.horarioAgendado}
+                                                    onChange={e => setFormData({ ...formData, horarioAgendado: e.target.value })}
+                                                    className="mt-1 bg-transparent w-full text-xs font-bold focus:outline-none"
+                                                />
+                                            </label>
+                                        </div>
+                                    </div>
 
-                            {/* Resumo */}
-                            <div className="bg-zinc-900 rounded-2xl p-6 text-white space-y-2">
-                                <div className="flex justify-between text-xs text-zinc-400 font-bold uppercase tracking-widest">
-                                    <span>Subtotal</span>
-                                    <span>R$ {cartTotal.toFixed(2)}</span>
-                                </div>
-                                <div className="flex justify-between text-xs text-zinc-400 font-bold uppercase tracking-widest">
-                                    <span>Entrega</span>
-                                    <span className="text-secondary">Grátis</span>
-                                </div>
-                                <div className="flex justify-between items-center pt-2 border-t border-white/10 mt-2">
-                                    <span className="font-black uppercase italic tracking-tighter text-lg">Total do Pedido</span>
-                                    <span className="text-2xl font-black text-secondary italic">R$ {cartTotal.toFixed(2)}</span>
-                                </div>
-                            </div>
+                                    {/* Resumo */}
+                                    <div className="bg-zinc-900 rounded-2xl p-6 text-white space-y-2">
+                                        <div className="flex justify-between text-xs text-zinc-400 font-bold uppercase tracking-widest">
+                                            <span>Subtotal</span>
+                                            <span>R$ {cartTotal.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-xs text-zinc-400 font-bold uppercase tracking-widest">
+                                            <span>Entrega</span>
+                                            <span className="text-secondary">Grátis</span>
+                                        </div>
+                                        <div className="flex justify-between items-center pt-2 border-t border-white/10 mt-2">
+                                            <span className="font-black uppercase italic tracking-tighter text-lg">Total do Pedido</span>
+                                            <span className="text-2xl font-black text-secondary italic">R$ {cartTotal.toFixed(2)}</span>
+                                        </div>
+                                    </div>
 
-                            <button
-                                type="submit"
-                                disabled={isSaving}
-                                className={`w-full py-5 rounded-2xl font-black text-lg uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl transition-all shadow-green-600/20 active:scale-95 ${isSaving ? 'bg-zinc-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white'}`}
-                            >
-                                {isSaving ? (
-                                    <>
-                                        <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-white"></div>
-                                        Processando...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Send className="w-6 h-6" />
-                                        Enviar Pedido ao WhatsApp
-                                    </>
-                                )}
-                            </button>
-                        </form>
+                                    <button
+                                        type="submit"
+                                        disabled={isSaving}
+                                        className={`w-full py-5 rounded-2xl font-black text-lg uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl transition-all shadow-green-600/20 active:scale-95 ${isSaving ? 'bg-zinc-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white'}`}
+                                    >
+                                        {isSaving ? (
+                                            <>
+                                                <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-white"></div>
+                                                Processando...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Send className="w-6 h-6" />
+                                                Enviar Pedido ao WhatsApp
+                                            </>
+                                        )}
+                                    </button>
+                                </form>
+                            </>
+                        )}
                     </motion.div>
                 </div>
             )}
