@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { motion } from 'framer-motion'
 import { Plus, Info, Pizza, Sparkles } from 'lucide-react'
 import SizePicker from './SizePicker'
 import HalfAndHalfModal from './HalfAndHalfModal'
