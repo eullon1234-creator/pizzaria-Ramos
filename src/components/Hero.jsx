@@ -16,10 +16,7 @@ export default function Hero() {
                     Ingredientes selecionados, massa artesanal e o sabor que você já conhece. Peça agora e receba em casa!
                 </p>
                 <div className="flex flex-col md:flex-row gap-4">
-                    <button className="btn-primary">Ver Cardápio</button>
-                    <button className="bg-white/10 backdrop-blur-md border border-white/20 px-6 py-2 rounded-lg font-semibold hover:bg-white/20 transition-all">
-                        Nossa História
-                    </button>
+                    <a href="#menu" className="btn-primary text-center">Ver Cardápio</a>
                 </div>
             </div>
         </section>
