@@ -1,12 +1,15 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #8B0000; /* Dark Red */
-  --color-secondary: #D4AF37; /* Gold */
-  --color-accent: #FFD700; /* Bright Gold */
-  
+  --color-primary: #8B0000;
+  /* Dark Red */
+  --color-secondary: #D4AF37;
+  /* Gold */
+  --color-accent: #FFD700;
+  /* Bright Gold */
+
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  
+
   --radius-xl: 1rem;
   --radius-2xl: 1.5rem;
 }
@@ -21,8 +24,19 @@
   .btn-primary {
     @apply bg-primary text-white px-6 py-2 rounded-lg font-semibold hover:bg-red-900 transition-colors shadow-lg active:scale-95;
   }
-  
+
   .btn-outline {
     @apply border-2 border-primary text-primary px-6 py-2 rounded-lg font-semibold hover:bg-primary hover:text-white transition-all active:scale-95;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }

@@ -3,13 +3,17 @@ import { supabase } from '../lib/supabase'
 import { Plus, Edit, Trash2, Power, Pizza, LayoutDashboard, LogOut, ChevronRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import ProductModal from '../components/ProductModal'
+import CategoryModal from '../components/CategoryModal'
 
 export default function AdminDashboard() {
+    const [view, setView] = useState('products') // 'products' or 'categories'
     const [products, setProducts] = useState([])
     const [categories, setCategories] = useState([])
     const [loading, setLoading] = useState(true)
     const [modalOpen, setModalOpen] = useState(false)
+    const [categoryModalOpen, setCategoryModalOpen] = useState(false)
     const [editingProduct, setEditingProduct] = useState(null)
+    const [editingCategory, setEditingCategory] = useState(null)
     const navigate = useNavigate()
 
     useEffect(() => {
@@ -58,14 +62,31 @@ export default function AdminDashboard() {
         }
     }
 
-    const handleAdd = () => {
-        setEditingProduct(null)
-        setModalOpen(true)
+    const deleteCategory = async (id) => {
+        if (window.confirm('Ao excluir a categoria, todos os produtos vinculados poderão ficar inacessíveis. Deseja continuar?')) {
+            const { error } = await supabase.from('categories').delete().eq('id', id)
+            if (!error) fetchData()
+        }
     }
 
-    const handleEdit = (product) => {
-        setEditingProduct(product)
-        setModalOpen(true)
+    const handleAdd = () => {
+        if (view === 'products') {
+            setEditingProduct(null)
+            setModalOpen(true)
+        } else {
+            setEditingCategory(null)
+            setCategoryModalOpen(true)
+        }
+    }
+
+    const handleEdit = (item) => {
+        if (view === 'products') {
+            setEditingProduct(item)
+            setModalOpen(true)
+        } else {
+            setEditingCategory(item)
+            setCategoryModalOpen(true)
+        }
     }
 
     if (loading) return (
@@ -87,9 +108,19 @@ export default function AdminDashboard() {
                 </div>
 
                 <nav className="flex-1 p-4 space-y-2">
-                    <button className="w-full flex items-center gap-3 p-3 rounded-xl bg-primary text-white font-bold transition-all">
+                    <button
+                        onClick={() => setView('products')}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all ${view === 'products' ? 'bg-primary text-white' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
+                    >
                         <LayoutDashboard className="w-5 h-5" />
                         Cardápio
+                    </button>
+                    <button
+                        onClick={() => setView('categories')}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all ${view === 'categories' ? 'bg-primary text-white' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
+                    >
+                        <Pizza className="w-5 h-5" />
+                        Categorias
                     </button>
                 </nav>
 
@@ -107,67 +138,98 @@ export default function AdminDashboard() {
             {/* Content */}
             <main className="flex-1 overflow-y-auto">
                 <header className="bg-white border-b border-zinc-200 p-6 flex justify-between items-center sticky top-0 z-10 shadow-sm">
-                    <h2 className="text-2xl font-black text-zinc-900 uppercase italic tracking-tighter">Gestão do Cardápio</h2>
+                    <h2 className="text-2xl font-black text-zinc-900 uppercase italic tracking-tighter">
+                        {view === 'products' ? 'Gestão do Cardápio' : 'Gestão de Categorias'}
+                    </h2>
                     <button
                         onClick={handleAdd}
                         className="btn-primary flex items-center gap-2 py-2 px-4 whitespace-nowrap"
                     >
                         <Plus className="w-5 h-5" />
-                        Novo Item
+                        {view === 'products' ? 'Novo Item' : 'Nova Categoria'}
                     </button>
                 </header>
 
-                <div className="p-6 lg:p-10 space-y-8">
-                    {categories.map(category => (
-                        <section key={category.id} className="space-y-4">
-                            <div className="flex items-center gap-2">
-                                <ChevronRight className="text-primary w-5 h-5" />
-                                <h3 className="text-lg font-black uppercase text-zinc-400 tracking-widest">{category.name}</h3>
-                            </div>
-
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                {products.filter(p => p.category_id === category.id).map(product => (
-                                    <div key={product.id} className="bg-white border border-zinc-100 rounded-2xl p-4 flex items-center gap-4 hover:shadow-lg transition-all">
-                                        <div className="w-16 h-16 bg-zinc-50 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0 border border-zinc-100">
-                                            {product.image_url ? (
-                                                <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <Pizza className="w-8 h-8 text-zinc-200" />
-                                            )}
+                <div className="p-6 lg:p-10 space-y-8 no-scrollbar">
+                    {view === 'products' ? (
+                        categories.map(category => (
+                            <section key={category.id} className="space-y-4">
+                                <div className="flex items-center gap-2">
+                                    <ChevronRight className="text-secondary w-5 h-5" />
+                                    <h3 className="text-lg font-black uppercase text-zinc-900 tracking-widest">{category.name}</h3>
+                                </div>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                    {products.filter(p => p.category_id === category.id).map(product => (
+                                        <div key={product.id} className="bg-white border border-zinc-100 rounded-2xl p-4 flex items-center gap-4 hover:shadow-lg transition-all">
+                                            <div className="w-16 h-16 bg-zinc-50 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0 border border-zinc-100">
+                                                {product.image_url ? (
+                                                    <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <Pizza className="w-8 h-8 text-zinc-200" />
+                                                )}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h4 className="font-bold text-zinc-900 truncate">{product.name}</h4>
+                                                <p className="text-xs text-zinc-500 truncate">{product.description}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => toggleStatus(product)}
+                                                    title={product.is_active ? 'Desativar' : 'Ativar'}
+                                                    className={`p-2 rounded-lg transition-colors ${product.is_active ? 'bg-green-50 text-green-600' : 'bg-zinc-100 text-zinc-400'}`}
+                                                >
+                                                    <Power className="w-5 h-5" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleEdit(product)}
+                                                    className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                                                >
+                                                    <Edit className="w-5 h-5" />
+                                                </button>
+                                                <button
+                                                    onClick={() => deleteProduct(product.id)}
+                                                    className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                                                >
+                                                    <Trash2 className="w-5 h-5" />
+                                                </button>
+                                            </div>
                                         </div>
-
-                                        <div className="flex-1 min-w-0">
-                                            <h4 className="font-bold text-zinc-900 truncate">{product.name}</h4>
-                                            <p className="text-xs text-zinc-500 truncate">{product.description}</p>
+                                    ))}
+                                </div>
+                            </section>
+                        ))
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {categories.map(category => (
+                                <div key={category.id} className="bg-white border border-zinc-100 rounded-2xl p-6 flex flex-col justify-between hover:shadow-lg transition-all group">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase text-zinc-400 tracking-widest mb-1">Ordem: {category.display_order}</p>
+                                            <h3 className="text-xl font-black uppercase italic tracking-tighter text-zinc-900 group-hover:text-primary transition-colors">{category.name}</h3>
                                         </div>
-
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex gap-2">
                                             <button
-                                                onClick={() => toggleStatus(product)}
-                                                title={product.is_active ? 'Desativar' : 'Ativar'}
-                                                className={`p-2 rounded-lg transition-colors ${product.is_active ? 'bg-green-50 text-green-600' : 'bg-zinc-100 text-zinc-400'
-                                                    }`}
-                                            >
-                                                <Power className="w-5 h-5" />
-                                            </button>
-                                            <button
-                                                onClick={() => handleEdit(product)}
-                                                className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                                                onClick={() => handleEdit(category)}
+                                                className="p-2 bg-zinc-50 rounded-lg text-zinc-400 hover:bg-blue-50 hover:text-blue-600 transition-all"
                                             >
                                                 <Edit className="w-5 h-5" />
                                             </button>
                                             <button
-                                                onClick={() => deleteProduct(product.id)}
-                                                className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                                                onClick={() => deleteCategory(category.id)}
+                                                className="p-2 bg-zinc-50 rounded-lg text-zinc-400 hover:bg-red-50 hover:text-red-600 transition-all"
                                             >
                                                 <Trash2 className="w-5 h-5" />
                                             </button>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        </section>
-                    ))}
+                                    <div className="mt-4 pt-4 border-t border-zinc-50 flex items-center justify-between">
+                                        <span className="text-xs text-zinc-400 font-bold uppercase">{products.filter(p => p.category_id === category.id).length} Produtos</span>
+                                        <ChevronRight className="w-4 h-4 text-zinc-200" />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {modalOpen && (
@@ -175,6 +237,14 @@ export default function AdminDashboard() {
                         product={editingProduct}
                         categories={categories}
                         onClose={() => setModalOpen(false)}
+                        onSave={fetchData}
+                    />
+                )}
+
+                {categoryModalOpen && (
+                    <CategoryModal
+                        category={editingCategory}
+                        onClose={() => setCategoryModalOpen(false)}
                         onSave={fetchData}
                     />
                 )}
