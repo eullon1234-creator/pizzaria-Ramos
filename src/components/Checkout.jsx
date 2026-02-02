@@ -92,16 +92,24 @@ export default function Checkout({ isOpen, onClose }) {
             if (orderError) throw orderError
 
             // 2. Save items to order_items
-            const orderItems = cart.map(item => ({
-                order_id: orderId,
-                flavor_1_id: item.id.startsWith('half-') ? null : item.id, // Handle regular vs half/half
-                item_type: item.id.startsWith('half-') ? 'meio-a-meio' : 'inteira',
-                quantity: item.quantity,
-                price: item.variation.price,
-                size_label: item.variation.size,
-                observations: item.name, // Store full name
-                product_description: item.description // Store ingredients
-            }))
+            const orderItems = cart.map(item => {
+                // Extract valid UUID for flavor_1_id
+                let productId = item.id
+                if (!item.id.startsWith('half-') && item.id.length > 36) {
+                    productId = item.id.substring(0, 36)
+                }
+
+                return {
+                    order_id: orderId,
+                    flavor_1_id: item.id.startsWith('half-') ? null : productId,
+                    item_type: item.id.startsWith('half-') ? 'meio-a-meio' : 'inteira',
+                    quantity: item.quantity,
+                    price: item.variation.price,
+                    size_label: item.variation.size,
+                    observations: item.name, // Store full name
+                    product_description: item.description // Store ingredients
+                }
+            })
 
             const { error: itemsError } = await supabase
                 .from('order_items')
