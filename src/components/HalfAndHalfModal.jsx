@@ -45,6 +45,7 @@ export default function HalfAndHalfModal({ isOpen, onClose, products }) {
             const halfAndHalfItem = {
                 id: `half-${flavor1.id}-${flavor2.id}-${Date.now()}`,
                 name: `Meio a Meio: ${flavor1.name} / ${flavor2.name}`,
+                description: `1/2 ${flavor1.name} (${flavor1.description}) + 1/2 ${flavor2.name} (${flavor2.description})`,
                 category_id: flavor1.category_id,
                 image_url: flavor1.image_url // Use first flavor image
             }

@@ -60,7 +60,7 @@ export default function AdminDashboard() {
             const { data: orderData } = await supabase
                 .from('orders')
                 .select('*, order_items(*)')
-                .order('created_at', { ascending: false })
+                .order('sequential_num', { ascending: false })
 
             setCategories(catData || [])
             setProducts(prodData || [])
@@ -255,7 +255,7 @@ export default function AdminDashboard() {
                                         <div className={`px-6 py-4 flex justify-between items-center border-b ${getStatusStyles(order.status)}`}>
                                             <div className="flex items-center gap-2">
                                                 <Clock className="w-4 h-4" />
-                                                <span className="text-xs font-black uppercase tracking-[0.2em]">#{order.id} • {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                <span className="text-xs font-black uppercase tracking-[0.2em]">PEDIDO #{order.sequential_num || '...'} • {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                             </div>
                                             <span className="text-[10px] font-black uppercase tracking-widest italic">{order.status}</span>
                                         </div>
@@ -296,9 +296,12 @@ export default function AdminDashboard() {
                                                     {order.order_items.map((item, idx) => (
                                                         <div key={idx} className="flex justify-between items-start gap-4 text-sm">
                                                             <div className="flex-1">
-                                                                <span className="font-black text-primary mr-2">{item.quantity}x</span>
-                                                                <span className="font-bold text-zinc-800">{item.observations}</span>
-                                                                <span className="text-[10px] font-black text-secondary ml-1 px-1 bg-secondary/10 rounded uppercase">{item.size_label}</span>
+                                                                <span className="font-black text-primary mr-2 uppercase tracking-tighter text-xs">{item.quantity}X</span>
+                                                                <span className="font-bold text-zinc-800 block">{item.observations}</span>
+                                                                {item.product_description && (
+                                                                    <p className="text-[10px] text-zinc-500 font-medium italic mt-0.5 mb-1 leading-tight">{item.product_description}</p>
+                                                                )}
+                                                                <span className="text-[10px] font-black text-secondary px-1 bg-secondary/10 rounded uppercase">{item.size_label}</span>
                                                             </div>
                                                             <span className="font-bold text-zinc-500 whitespace-nowrap">R$ {(item.price * item.quantity).toFixed(2)}</span>
                                                         </div>

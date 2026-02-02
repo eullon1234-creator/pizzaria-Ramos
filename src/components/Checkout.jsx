@@ -94,7 +94,8 @@ export default function Checkout({ isOpen, onClose }) {
                 quantity: item.quantity,
                 price: item.variation.price,
                 size_label: item.variation.size,
-                observations: item.name // Store full name as it contains the flavor details
+                observations: item.name, // Store full name
+                product_description: item.description // Store ingredients
             }))
 
             const { error: itemsError } = await supabase
