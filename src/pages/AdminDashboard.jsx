@@ -353,6 +353,17 @@ export default function AdminDashboard() {
                                                     {order.delivery_address.reference && (
                                                         <p className="text-[10px] text-zinc-400 italic font-medium">Ref: {order.delivery_address.reference}</p>
                                                     )}
+                                                    {order.delivery_address.location_link && (
+                                                        <a
+                                                            href={order.delivery_address.location_link}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex items-center gap-1 text-[10px] text-blue-600 font-bold uppercase mt-1 hover:underline"
+                                                        >
+                                                            <MapPin className="w-3 h-3" />
+                                                            Ver no Mapa
+                                                        </a>
+                                                    )}
                                                 </div>
                                             </div>
 

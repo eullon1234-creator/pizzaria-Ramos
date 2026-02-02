@@ -1,12 +1,13 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, MapPin, Phone, User, Send, Clock, Info } from 'lucide-react'
+import { X, MapPin, User, Send, Clock, LocateFixed } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { supabase } from '../lib/supabase'
 
 export default function Checkout({ isOpen, onClose }) {
     const { cart, cartTotal, clearCart } = useCart()
     const [isSaving, setIsSaving] = useState(false)
+    const [isLoadingLocation, setIsLoadingLocation] = useState(false)
     const [formData, setFormData] = useState({
         nome: '',
         whatsapp: '',
@@ -14,6 +15,7 @@ export default function Checkout({ isOpen, onClose }) {
         numero: '',
         bairro: '',
         pontoReferencia: '',
+        locationLink: '',
         tipoEntrega: 'imediata', // 'imediata' or 'agendada'
         horarioAgendado: '',
         paymentMethod: 'pix', // 'pix', 'dinheiro', 'cartao'
@@ -30,6 +32,8 @@ export default function Checkout({ isOpen, onClose }) {
         const minutes = now.getMinutes()
         const currentTime = hours * 60 + minutes
 
+        // Sunday = 0, Monday = 1, ...
+        // If today is Monday, closed
         if (day === 1) return { open: false, reason: 'Estamos fechados hoje (Segunda-feira).' }
 
         const openTime = 18 * 60
@@ -49,6 +53,62 @@ export default function Checkout({ isOpen, onClose }) {
             result += chars.charAt(Math.floor(Math.random() * chars.length))
         }
         return result
+    }
+
+    const handleGetLocation = () => {
+        if (!navigator.geolocation) {
+            alert('Seu navegador não suporta geolocalização.')
+            return
+        }
+
+        setIsLoadingLocation(true)
+
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            const { latitude, longitude } = position.coords
+            const googleMapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`
+
+            try {
+                // Reverse geocoding with OpenStreetMap
+                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`)
+                const data = await response.json()
+
+                if (data && data.address) {
+                    const address = data.address
+                    const street = address.road || ''
+                    const neighborhood = address.suburb || address.neighbourhood || address.residential || ''
+                    const number = address.house_number || ''
+
+                    setFormData(prev => ({
+                        ...prev,
+                        endereco: street,
+                        bairro: neighborhood,
+                        numero: number,
+                        locationLink: googleMapsLink
+                    }))
+                } else {
+                    setFormData(prev => ({
+                        ...prev,
+                        locationLink: googleMapsLink
+                    }))
+                }
+            } catch (error) {
+                console.error('Error fetching address:', error)
+                setFormData(prev => ({
+                    ...prev,
+                    locationLink: googleMapsLink
+                }))
+            } finally {
+                setIsLoadingLocation(false)
+            }
+        }, (error) => {
+            console.error('Geolocation error:', error)
+            alert('Não foi possível obter sua localização. Verifique se o GPS está ativado.')
+            setIsLoadingLocation(false)
+        }, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        })
     }
 
     const handleSendOrder = async (e) => {
@@ -77,7 +137,8 @@ export default function Checkout({ isOpen, onClose }) {
                         street: formData.endereco,
                         number: formData.numero,
                         neighborhood: formData.bairro,
-                        reference: formData.pontoReferencia
+                        reference: formData.pontoReferencia,
+                        location_link: formData.locationLink
                     },
                     delivery_type: formData.tipoEntrega,
                     scheduled_time: formData.horarioAgendado,
@@ -93,7 +154,6 @@ export default function Checkout({ isOpen, onClose }) {
 
             // 2. Save items to order_items
             const orderItems = cart.map(item => {
-                // Extract valid UUID for flavor_1_id
                 let productId = item.id
                 if (!item.id.startsWith('half-') && item.id.length > 36) {
                     productId = item.id.substring(0, 36)
@@ -106,8 +166,8 @@ export default function Checkout({ isOpen, onClose }) {
                     quantity: item.quantity,
                     price: item.variation.price,
                     size_label: item.variation.size,
-                    observations: item.name, // Store full name
-                    product_description: item.description // Store ingredients
+                    observations: item.name,
+                    product_description: item.description
                 }
             })
 
@@ -126,7 +186,9 @@ export default function Checkout({ isOpen, onClose }) {
             message += `*📍 ENDEREÇO DE ENTREGA:*\n`
             message += `${formData.endereco}, ${formData.numero}\n`
             message += `Bairro: ${formData.bairro}\n`
-            if (formData.pontoReferencia) message += `Ref: ${formData.pontoReferencia}\n\n`
+            if (formData.pontoReferencia) message += `Ref: ${formData.pontoReferencia}\n`
+            if (formData.locationLink) message += `🗺️ *Localização:* ${formData.locationLink}\n`
+            message += `\n`
 
             message += `*🕒 ENTREGA:* ${formData.tipoEntrega === 'imediata' ? 'Imediata (45min - 1h30min)' : `Agendada para ${formData.horarioAgendado}`}\n\n`
 
@@ -223,10 +285,26 @@ export default function Checkout({ isOpen, onClose }) {
 
                             {/* Endereço */}
                             <div className="space-y-4 pt-4 border-t border-zinc-100">
-                                <div className="flex items-center gap-2 text-primary">
-                                    <MapPin className="w-5 h-5" />
-                                    <h3 className="font-black uppercase italic text-sm tracking-wider">Endereço de Entrega</h3>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-primary">
+                                        <MapPin className="w-5 h-5" />
+                                        <h3 className="font-black uppercase italic text-sm tracking-wider">Endereço de Entrega</h3>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={handleGetLocation}
+                                        disabled={isLoadingLocation}
+                                        className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-1 hover:bg-primary/5 px-2 py-1 rounded-lg transition-colors"
+                                    >
+                                        {isLoadingLocation ? (
+                                            <span className="block w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin"></span>
+                                        ) : (
+                                            <LocateFixed className="w-3 h-3" />
+                                        )}
+                                        {isLoadingLocation ? 'Buscando...' : 'Usar Localização Atual'}
+                                    </button>
                                 </div>
+
                                 <div className="space-y-4">
                                     <div className="grid grid-cols-4 gap-4">
                                         <div className="col-span-3 space-y-1">
@@ -275,6 +353,20 @@ export default function Checkout({ isOpen, onClose }) {
                                             />
                                         </div>
                                     </div>
+
+                                    {formData.locationLink && (
+                                        <div className="bg-green-50 px-3 py-2 rounded-lg flex items-center gap-2 text-xs text-green-700 animate-in fade-in slide-in-from-top-1">
+                                            <LocateFixed className="w-3 h-3" />
+                                            <span className="font-bold">Localização anexada ao pedido! ({formData.locationLink})</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setFormData({ ...formData, locationLink: '' })}
+                                                className="ml-auto text-green-600 hover:text-green-800"
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
