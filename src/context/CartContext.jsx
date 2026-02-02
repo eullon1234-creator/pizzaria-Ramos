@@ -22,7 +22,7 @@ export function CartProvider({ children }) {
 
             return [...prev, { ...product, variation, quantity }]
         })
-        setIsCartOpen(true)
+        // Removed auto-open: setIsCartOpen(true)
     }
 
     const removeFromCart = (productId, variationId) => {

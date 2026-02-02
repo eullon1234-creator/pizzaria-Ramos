@@ -2,6 +2,7 @@ import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Header from './components/Header'
 import CartDrawer from './components/CartDrawer'
+import FloatingCart from './components/FloatingCart'
 import { CartProvider } from './context/CartContext'
 import Store from './pages/Store'
 import AdminLogin from './pages/AdminLogin'
@@ -46,6 +47,7 @@ function App() {
                   </div>
                 </footer>
                 <CartDrawer />
+                <FloatingCart />
               </>
             } />
 
