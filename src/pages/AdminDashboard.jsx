@@ -2,11 +2,14 @@ import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { Plus, Edit, Trash2, Power, Pizza, LayoutDashboard, LogOut, ChevronRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import ProductModal from '../components/ProductModal'
 
 export default function AdminDashboard() {
     const [products, setProducts] = useState([])
     const [categories, setCategories] = useState([])
     const [loading, setLoading] = useState(true)
+    const [modalOpen, setModalOpen] = useState(false)
+    const [editingProduct, setEditingProduct] = useState(null)
     const navigate = useNavigate()
 
     useEffect(() => {
@@ -54,6 +57,16 @@ export default function AdminDashboard() {
         }
     }
 
+    const handleAdd = () => {
+        setEditingProduct(null)
+        setModalOpen(true)
+    }
+
+    const handleEdit = (product) => {
+        setEditingProduct(product)
+        setModalOpen(true)
+    }
+
     if (loading) return (
         <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-primary"></div>
@@ -94,7 +107,10 @@ export default function AdminDashboard() {
             <main className="flex-1 overflow-y-auto">
                 <header className="bg-white border-b border-zinc-200 p-6 flex justify-between items-center sticky top-0 z-10 shadow-sm">
                     <h2 className="text-2xl font-black text-zinc-900 uppercase italic tracking-tighter">Gestão do Cardápio</h2>
-                    <button className="btn-primary flex items-center gap-2 py-2 px-4">
+                    <button
+                        onClick={handleAdd}
+                        className="btn-primary flex items-center gap-2 py-2 px-4 whitespace-nowrap"
+                    >
                         <Plus className="w-5 h-5" />
                         Novo Item
                     </button>
@@ -111,8 +127,12 @@ export default function AdminDashboard() {
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                 {products.filter(p => p.category_id === category.id).map(product => (
                                     <div key={product.id} className="bg-white border border-zinc-100 rounded-2xl p-4 flex items-center gap-4 hover:shadow-lg transition-all">
-                                        <div className="w-16 h-16 bg-zinc-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-zinc-100">
-                                            <Pizza className="w-8 h-8 text-zinc-200" />
+                                        <div className="w-16 h-16 bg-zinc-50 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0 border border-zinc-100">
+                                            {product.image_url ? (
+                                                <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <Pizza className="w-8 h-8 text-zinc-200" />
+                                            )}
                                         </div>
 
                                         <div className="flex-1 min-w-0">
@@ -129,7 +149,10 @@ export default function AdminDashboard() {
                                             >
                                                 <Power className="w-5 h-5" />
                                             </button>
-                                            <button className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors">
+                                            <button
+                                                onClick={() => handleEdit(product)}
+                                                className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                                            >
                                                 <Edit className="w-5 h-5" />
                                             </button>
                                             <button
