@@ -74,8 +74,10 @@ export default function Checkout({ isOpen, onClose }) {
 
                 if (data && data.address) {
                     const address = data.address
-                    const street = address.road || ''
-                    const neighborhood = address.suburb || address.neighbourhood || address.residential || ''
+
+                    // Improved mapping for Brazilian addresses
+                    const street = address.road || address.street || address.pedestrian || address.footway || address.path || ''
+                    const neighborhood = address.suburb || address.neighbourhood || address.residential || address.city_district || address.village || ''
                     const number = address.house_number || ''
 
                     setFormData(prev => ({
@@ -93,6 +95,7 @@ export default function Checkout({ isOpen, onClose }) {
                 }
             } catch (error) {
                 console.error('Error fetching address:', error)
+                // Fallback to just the link if geocoding fails
                 setFormData(prev => ({
                     ...prev,
                     locationLink: googleMapsLink

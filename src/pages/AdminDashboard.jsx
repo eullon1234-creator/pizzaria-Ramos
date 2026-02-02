@@ -4,6 +4,7 @@ import { Plus, Edit, Trash2, Power, Pizza, LayoutDashboard, LogOut, ChevronRight
 import { useNavigate } from 'react-router-dom'
 import ProductModal from '../components/ProductModal'
 import CategoryModal from '../components/CategoryModal'
+import PixSettingsModal from '../components/PixSettingsModal'
 
 export default function AdminDashboard() {
     const [view, setView] = useState('orders') // default to orders
@@ -13,6 +14,7 @@ export default function AdminDashboard() {
     const [loading, setLoading] = useState(true)
     const [modalOpen, setModalOpen] = useState(false)
     const [categoryModalOpen, setCategoryModalOpen] = useState(false)
+    const [pixModalOpen, setPixModalOpen] = useState(false)
     const [editingProduct, setEditingProduct] = useState(null)
     const [editingCategory, setEditingCategory] = useState(null)
     const [flavors, setFlavors] = useState([])
@@ -285,12 +287,20 @@ export default function AdminDashboard() {
                             {view === 'orders' ? 'Monitor de Pedidos' : view === 'products' ? 'Gestão do Cardápio' : view === 'flavors' ? 'Sabores de Bebidas' : 'Gestão de Categorias'}
                         </h2>
                         {view === 'orders' && (
-                            <div className="flex items-center gap-2 mt-1">
-                                <span className="flex h-2 w-2 relative">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                                </span>
-                                <span className="text-[10px] font-black uppercase tracking-widest text-green-600">Recebendo pedidos em tempo real</span>
+                            <div className="flex items-center gap-4 mt-1">
+                                <div className="flex items-center gap-2">
+                                    <span className="flex h-2 w-2 relative">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                    </span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-green-600">Recebendo pedidos em tempo real</span>
+                                </div>
+                                <button
+                                    onClick={() => setPixModalOpen(true)}
+                                    className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-1 hover:underline"
+                                >
+                                    <span className="text-lg">💠</span> Configurar PIX
+                                </button>
                             </div>
                         )}
                     </div>
@@ -648,6 +658,11 @@ export default function AdminDashboard() {
                         onSave={fetchData}
                     />
                 )}
+
+                <PixSettingsModal
+                    isOpen={pixModalOpen}
+                    onClose={() => setPixModalOpen(false)}
+                />
             </main>
         </div>
     )
