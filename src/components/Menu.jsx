@@ -49,7 +49,11 @@ export default function Menu() {
     }
 
     const handleOrderClick = (product) => {
-        if (product.product_prices.length > 1) {
+        const isBeverage = product.name.toLowerCase().includes('refrigerante') ||
+            product.name.toLowerCase().includes('bebida') ||
+            product.category_id === 'bebidas' // Adjust if you know the ID, but name check is safer for now
+
+        if (product.product_prices.length > 1 || isBeverage) {
             setSelectedProduct(product)
         } else {
             addToCart(product, product.product_prices[0])
