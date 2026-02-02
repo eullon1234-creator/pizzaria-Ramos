@@ -17,7 +17,7 @@ export default function Checkout({ isOpen, onClose }) {
     })
 
     const DELIVERY_FEE = 5.00
-    const PIZZARIA_WHATSAPP = "558699958948"
+    const PIZZARIA_WHATSAPP = "5586994471909"
 
     const checkBusinessHours = () => {
         const now = new Date()

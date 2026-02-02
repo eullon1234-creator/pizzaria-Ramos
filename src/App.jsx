@@ -31,7 +31,7 @@ function App() {
                       </div>
                       <div>
                         <h4 className="text-zinc-200 font-bold mb-4 uppercase tracking-wider text-sm">Contato</h4>
-                        <p className="text-zinc-400 text-sm">WhatsApp: (86) 99958-9480</p>
+                        <p className="text-zinc-400 text-sm">WhatsApp: (86) 99447-1909</p>
                         <p className="text-zinc-400 text-sm">Endereço: Novo Amarante</p>
                       </div>
                       <div>
