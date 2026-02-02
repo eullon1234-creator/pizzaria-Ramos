@@ -30,7 +30,8 @@ export default function AdminDashboard() {
             setCategories(catData || [])
             setProducts(prodData || [])
         } catch (error) {
-            console.error(error)
+            console.error('Error fetching dashboard data:', error.message || error)
+            if (error.details) console.error('Error details:', error.details)
         } finally {
             setLoading(false)
         }

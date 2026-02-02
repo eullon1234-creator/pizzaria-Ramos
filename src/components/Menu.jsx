@@ -39,7 +39,9 @@ export default function Menu() {
             if (prodErr) throw prodErr
             setProducts(prods)
         } catch (error) {
-            console.error('Error fetching menu:', error)
+            console.error('Error fetching menu details:', error.message || error)
+            if (error.details) console.error('Error details:', error.details)
+            if (error.hint) console.error('Error hint:', error.hint)
         } finally {
             setLoading(false)
         }
@@ -73,8 +75,8 @@ export default function Menu() {
                             key={cat.id}
                             onClick={() => setActiveCategory(cat.id)}
                             className={`whitespace-nowrap px-6 py-2 rounded-full font-bold transition-all border-2 ${activeCategory === cat.id
-                                    ? 'bg-primary border-primary text-white shadow-lg scale-105'
-                                    : 'bg-zinc-100 border-transparent text-zinc-500 hover:bg-zinc-200'
+                                ? 'bg-primary border-primary text-white shadow-lg scale-105'
+                                : 'bg-zinc-100 border-transparent text-zinc-500 hover:bg-zinc-200'
                                 }`}
                         >
                             {cat.name}
