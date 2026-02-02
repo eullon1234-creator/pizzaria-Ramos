@@ -78,6 +78,8 @@ export default function Checkout({ isOpen, onClose }) {
                     },
                     delivery_type: formData.tipoEntrega,
                     scheduled_time: formData.horarioAgendado,
+                    subtotal: cartTotal,
+                    delivery_fee: 0,
                     total: cartTotal,
                     status: 'pendente'
                 })
