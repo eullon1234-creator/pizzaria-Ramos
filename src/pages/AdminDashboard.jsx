@@ -168,6 +168,15 @@ export default function AdminDashboard() {
                         </section>
                     ))}
                 </div>
+
+                {modalOpen && (
+                    <ProductModal
+                        product={editingProduct}
+                        categories={categories}
+                        onClose={() => setModalOpen(false)}
+                        onSave={fetchData}
+                    />
+                )}
             </main>
         </div>
     )
