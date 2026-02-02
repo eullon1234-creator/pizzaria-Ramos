@@ -290,10 +290,10 @@ export default function AdminDashboard() {
                                             <div className="bg-zinc-50 rounded-2xl p-4 space-y-3">
                                                 <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 border-b border-zinc-100 pb-2 flex justify-between">
                                                     Itens do Pedido
-                                                    <span>{order.order_items.length} itens</span>
+                                                    <span>{order.order_items?.length || 0} itens</span>
                                                 </h4>
                                                 <div className="space-y-2">
-                                                    {order.order_items.map((item, idx) => (
+                                                    {(order.order_items || []).map((item, idx) => (
                                                         <div key={idx} className="flex justify-between items-start gap-4 text-sm">
                                                             <div className="flex-1">
                                                                 <span className="font-black text-primary mr-2 uppercase tracking-tighter text-xs">{item.quantity}X</span>
