@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { Plus, Info, Pizza } from 'lucide-react'
+import { Plus, Info, Pizza, Sparkles } from 'lucide-react'
 import SizePicker from './SizePicker'
+import HalfAndHalfModal from './HalfAndHalfModal'
 import { useCart } from '../context/CartContext'
 
 export default function Menu() {
@@ -10,6 +11,7 @@ export default function Menu() {
     const [activeCategory, setActiveCategory] = useState(null)
     const [loading, setLoading] = useState(true)
     const [selectedProduct, setSelectedProduct] = useState(null)
+    const [isHalfModalOpen, setIsHalfModalOpen] = useState(false)
 
     const { addToCart } = useCart()
 
@@ -40,24 +42,21 @@ export default function Menu() {
             setProducts(prods)
         } catch (error) {
             console.error('Error fetching menu details:', error.message || error)
-            if (error.details) console.error('Error details:', error.details)
-            if (error.hint) console.error('Error hint:', error.hint)
         } finally {
             setLoading(false)
         }
     }
 
     const handleOrderClick = (product) => {
-        // If it's a pizza or has multiple sizes, open picker
         if (product.product_prices.length > 1) {
             setSelectedProduct(product)
         } else {
-            // Direct add for single price items (e.g., snacks)
             addToCart(product, product.product_prices[0])
         }
     }
 
     const filteredProducts = products.filter(p => p.category_id === activeCategory)
+    const isPizzaCategory = categories.find(c => c.id === activeCategory)?.name.toLowerCase().includes('pizza')
 
     if (loading) return (
         <div className="flex justify-center py-20">
@@ -83,6 +82,36 @@ export default function Menu() {
                         </button>
                     ))}
                 </div>
+
+                {/* Meio a Meio Banner - Only for Pizzas */}
+                {isPizzaCategory && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-8"
+                    >
+                        <button
+                            onClick={() => setIsHalfModalOpen(true)}
+                            className="w-full bg-gradient-to-r from-primary to-red-600 p-6 rounded-3xl text-white flex items-center justify-between group overflow-hidden relative shadow-xl shadow-primary/20 active:scale-[0.98] transition-all"
+                        >
+                            <div className="relative z-10 text-left">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <Sparkles className="w-5 h-5 text-secondary animate-pulse" />
+                                    <span className="text-secondary font-black uppercase tracking-[0.3em] text-[10px]">Novidade</span>
+                                </div>
+                                <h3 className="text-2xl font-black uppercase italic tracking-tighter">Montar Meio a Meio</h3>
+                                <p className="text-white/80 text-xs font-bold uppercase tracking-wider mt-1">Escolha 2 sabores em uma única pizza!</p>
+                            </div>
+                            <div className="relative z-10 bg-white/20 p-4 rounded-2xl backdrop-blur-md group-hover:scale-110 transition-transform">
+                                <Pizza className="w-10 h-10 text-white" />
+                            </div>
+
+                            {/* Decorative background elements */}
+                            <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
+                            <div className="absolute -left-4 -top-4 w-24 h-24 bg-white/5 rounded-full blur-2xl" />
+                        </button>
+                    </motion.div>
+                )}
 
                 {/* Product Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -132,6 +161,12 @@ export default function Menu() {
                 product={selectedProduct}
                 isOpen={!!selectedProduct}
                 onClose={() => setSelectedProduct(null)}
+            />
+
+            <HalfAndHalfModal
+                isOpen={isHalfModalOpen}
+                onClose={() => setIsHalfModalOpen(false)}
+                products={products.filter(p => p.category_id === activeCategory)}
             />
         </section>
     )
