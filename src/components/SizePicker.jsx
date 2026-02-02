@@ -21,11 +21,11 @@ export default function SizePicker({ product, isOpen, onClose }) {
                 import('../lib/supabase').then(({ supabase }) => {
                     supabase
                         .from('beverage_flavors')
-                        .select('name')
+                        .select('name, available_sizes')
                         .eq('is_active', true)
                         .order('name')
                         .then(({ data }) => {
-                            if (data) setFlavors(data.map(f => f.name))
+                            if (data) setFlavors(data)
                         })
                 })
             }
@@ -52,9 +52,10 @@ export default function SizePicker({ product, isOpen, onClose }) {
                 // Create a stable unique ID based on product ID and flavor
                 // We use a random suffix just to be safe or deterministic hash if possible
                 // But simply appending flavor is good enough for this context
-                const flavorSlug = selectedFlavor.toLowerCase().replace(/\s+/g, '-')
+                // But simply appending flavor is good enough for this context
+                const flavorSlug = selectedFlavor.name.toLowerCase().replace(/\s+/g, '-')
                 finalProduct.id = `${product.id}-${flavorSlug}`
-                finalProduct.name = `${product.name} ${selectedFlavor}` // "Refrigerante 2L Coca-Cola"
+                finalProduct.name = `${product.name} ${selectedFlavor.name}` // "Refrigerante 2L Coca-Cola"
             }
 
             addToCart(finalProduct, selectedSize)
@@ -121,23 +122,28 @@ export default function SizePicker({ product, isOpen, onClose }) {
                             </div>
 
                             {/* Flavors (Only for Beverages) */}
-                            {isBeverage && (
+                            {isBeverage && selectedSize && (
                                 <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4">
                                     <h4 className="text-xs font-black uppercase text-zinc-400 tracking-widest">Sabor</h4>
                                     <div className="grid grid-cols-2 gap-2">
-                                        {flavors.map(flavor => (
-                                            <button
-                                                key={flavor}
-                                                onClick={() => setSelectedFlavor(flavor)}
-                                                className={`p-3 rounded-xl border-2 font-bold text-sm transition-all ${selectedFlavor === flavor
-                                                    ? 'border-primary bg-primary text-white shadow-lg shadow-primary/30'
-                                                    : 'border-zinc-100 bg-zinc-50 text-zinc-600 hover:border-zinc-300'
-                                                    }`}
-                                            >
-                                                {flavor}
-                                            </button>
-                                        ))}
+                                        {flavors
+                                            .filter(f => !f.available_sizes || f.available_sizes.includes(selectedSize.size))
+                                            .map(flavor => (
+                                                <button
+                                                    key={flavor.name}
+                                                    onClick={() => setSelectedFlavor(flavor)}
+                                                    className={`p-3 rounded-xl border-2 font-bold text-sm transition-all ${selectedFlavor?.name === flavor.name
+                                                        ? 'border-primary bg-primary text-white shadow-lg shadow-primary/30'
+                                                        : 'border-zinc-100 bg-zinc-50 text-zinc-600 hover:border-zinc-300'
+                                                        }`}
+                                                >
+                                                    {flavor.name}
+                                                </button>
+                                            ))}
                                     </div>
+                                    {flavors.filter(f => !f.available_sizes || f.available_sizes.includes(selectedSize.size)).length === 0 && (
+                                        <p className="text-sm text-zinc-500 italic">Nenhum sabor disponível para este tamanho.</p>
+                                    )}
                                 </div>
                             )}
                         </div>

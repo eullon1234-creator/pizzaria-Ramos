@@ -17,6 +17,8 @@ export default function AdminDashboard() {
     const [editingCategory, setEditingCategory] = useState(null)
     const [flavors, setFlavors] = useState([])
     const [newFlavor, setNewFlavor] = useState('')
+
+    const AVAILABLE_SIZES = ['Lata 350ml', '1 Litro', '1.5 Litro', '2 Litros']
     const navigate = useNavigate()
     const audioRef = useRef(null)
 
@@ -70,9 +72,30 @@ export default function AdminDashboard() {
         if (!error) fetchFlavors()
     }
 
+    const toggleFlavorSize = async (flavor, size) => {
+        const currentSizes = flavor.available_sizes || []
+        let newSizes
+
+        if (currentSizes.includes(size)) {
+            newSizes = currentSizes.filter(s => s !== size)
+        } else {
+            newSizes = [...currentSizes, size]
+        }
+
+        const { error } = await supabase
+            .from('beverage_flavors')
+            .update({ available_sizes: newSizes })
+            .eq('id', flavor.id)
+
+        if (!error) fetchFlavors()
+    }
+
     const addFlavor = async () => {
         if (!newFlavor.trim()) return
-        const { error } = await supabase.from('beverage_flavors').insert({ name: newFlavor.trim() })
+        const { error } = await supabase.from('beverage_flavors').insert({
+            name: newFlavor.trim(),
+            available_sizes: AVAILABLE_SIZES // Default to all sizes available
+        })
         if (!error) {
             setNewFlavor('')
             fetchFlavors()
@@ -476,24 +499,43 @@ export default function AdminDashboard() {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {flavors.map(flavor => (
-                                    <div key={flavor.id} className="bg-white border border-zinc-100 rounded-2xl p-4 flex items-center justify-between hover:shadow-lg transition-all">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-3 h-3 rounded-full ${flavor.is_active ? 'bg-green-500' : 'bg-red-500'}`} />
-                                            <span className="font-bold text-zinc-800">{flavor.name}</span>
+                                    <div key={flavor.id} className="bg-white border border-zinc-100 rounded-2xl p-4 hover:shadow-lg transition-all space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-3 h-3 rounded-full ${flavor.is_active ? 'bg-green-500' : 'bg-red-500'}`} />
+                                                <span className="font-bold text-zinc-800">{flavor.name}</span>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => toggleFlavorStatus(flavor)}
+                                                    className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider ${flavor.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
+                                                >
+                                                    {flavor.is_active ? 'Ativo' : 'Pausado'}
+                                                </button>
+                                                <button
+                                                    onClick={() => deleteFlavor(flavor.id)}
+                                                    className="p-2 text-zinc-300 hover:text-red-500 transition-colors"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div className="flex gap-2">
-                                            <button
-                                                onClick={() => toggleFlavorStatus(flavor)}
-                                                className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider ${flavor.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
-                                            >
-                                                {flavor.is_active ? 'Ativo' : 'Pausado'}
-                                            </button>
-                                            <button
-                                                onClick={() => deleteFlavor(flavor.id)}
-                                                className="p-2 text-zinc-300 hover:text-red-500 transition-colors"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
+
+                                        <div className="pt-3 border-t border-zinc-100">
+                                            <p className="text-[10px] font-black uppercase text-zinc-400 tracking-widest mb-2">Tamanhos Disponíveis</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {AVAILABLE_SIZES.map(size => (
+                                                    <label key={size} className="flex items-center gap-2 cursor-pointer bg-zinc-50 px-2 py-1 rounded-lg hover:bg-zinc-100 transition-colors">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={flavor.available_sizes?.includes(size)}
+                                                            onChange={() => toggleFlavorSize(flavor, size)}
+                                                            className="rounded border-zinc-300 text-primary focus:ring-primary w-4 h-4"
+                                                        />
+                                                        <span className="text-xs font-bold text-zinc-600">{size}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
