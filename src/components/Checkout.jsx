@@ -120,7 +120,7 @@ export default function Checkout({ isOpen, onClose }) {
             message += `Bairro: ${formData.bairro}\n`
             if (formData.pontoReferencia) message += `Ref: ${formData.pontoReferencia}\n\n`
 
-            message += `*🕒 ENTREGA:* ${formData.tipoEntrega === 'imediata' ? 'O mais rápido possível' : `Agendada para ${formData.horarioAgendado}`}\n\n`
+            message += `*🕒 ENTREGA:* ${formData.tipoEntrega === 'imediata' ? 'Imediata (45min - 1h30min)' : `Agendada para ${formData.horarioAgendado}`}\n\n`
 
             message += `*🛒 ITENS DO PEDIDO:*\n`
             message += cart.map(item => `• ${item.quantity}x ${item.name} (${item.variation.size}) - R$ ${(item.variation.price * item.quantity).toFixed(2)}`).join('\n')
@@ -363,6 +363,7 @@ export default function Checkout({ isOpen, onClose }) {
                                         />
                                         <span className="block font-black text-xs uppercase tracking-tighter">Imediata</span>
                                         <span className="block text-[10px] text-zinc-500 font-bold uppercase mt-1 italic text-secondary">O mais rápido</span>
+                                        <span className="block text-[10px] text-zinc-400 font-bold mt-0.5">Previsão: 45min - 1h30min</span>
                                     </label>
                                     <label className={`flex-1 p-4 rounded-2xl border-2 transition-all cursor-pointer ${formData.tipoEntrega === 'agendada' ? 'border-primary bg-primary/5' : 'border-zinc-100 bg-zinc-50 opacity-60'}`}>
                                         <input
