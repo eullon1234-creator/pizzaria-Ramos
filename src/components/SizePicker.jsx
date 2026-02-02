@@ -8,13 +8,29 @@ export default function SizePicker({ product, isOpen, onClose }) {
     const [selectedFlavor, setSelectedFlavor] = useState(null)
     const { addToCart } = useCart()
 
+    const [flavors, setFlavors] = React.useState([])
+
     // Reset states when closed
     React.useEffect(() => {
         if (!isOpen) {
             setSelectedSize(null)
             setSelectedFlavor(null)
+        } else {
+            // Fetch active flavors
+            if (product.name.toLowerCase().includes('refrigerante') || product.name.toLowerCase().includes('bebida')) {
+                import('../lib/supabase').then(({ supabase }) => {
+                    supabase
+                        .from('beverage_flavors')
+                        .select('name')
+                        .eq('is_active', true)
+                        .order('name')
+                        .then(({ data }) => {
+                            if (data) setFlavors(data.map(f => f.name))
+                        })
+                })
+            }
         }
-    }, [isOpen])
+    }, [isOpen, product])
 
     // Auto-select size if only 1 option
     React.useEffect(() => {
@@ -27,8 +43,6 @@ export default function SizePicker({ product, isOpen, onClose }) {
 
     const isBeverage = product.name.toLowerCase().includes('refrigerante') ||
         product.name.toLowerCase().includes('bebida')
-
-    const flavors = ['Coca-Cola', 'Fanta Uva', 'Fanta Laranja', 'Guaraná', 'Guaraná Jesus']
 
     const handleAdd = () => {
         if (selectedSize && (!isBeverage || selectedFlavor)) {
@@ -116,8 +130,8 @@ export default function SizePicker({ product, isOpen, onClose }) {
                                                 key={flavor}
                                                 onClick={() => setSelectedFlavor(flavor)}
                                                 className={`p-3 rounded-xl border-2 font-bold text-sm transition-all ${selectedFlavor === flavor
-                                                        ? 'border-primary bg-primary text-white shadow-lg shadow-primary/30'
-                                                        : 'border-zinc-100 bg-zinc-50 text-zinc-600 hover:border-zinc-300'
+                                                    ? 'border-primary bg-primary text-white shadow-lg shadow-primary/30'
+                                                    : 'border-zinc-100 bg-zinc-50 text-zinc-600 hover:border-zinc-300'
                                                     }`}
                                             >
                                                 {flavor}
@@ -132,8 +146,8 @@ export default function SizePicker({ product, isOpen, onClose }) {
                             disabled={!selectedSize || (isBeverage && !selectedFlavor)}
                             onClick={handleAdd}
                             className={`w-full mt-8 py-4 rounded-2xl font-black text-lg uppercase tracking-widest transition-all shadow-lg flex items-center justify-center gap-3 ${selectedSize && (!isBeverage || selectedFlavor)
-                                    ? 'bg-primary text-white hover:bg-red-900 active:scale-95 shadow-primary/20'
-                                    : 'bg-zinc-200 text-zinc-400 cursor-not-allowed shadow-none'
+                                ? 'bg-primary text-white hover:bg-red-900 active:scale-95 shadow-primary/20'
+                                : 'bg-zinc-200 text-zinc-400 cursor-not-allowed shadow-none'
                                 }`}
                         >
                             Adicionar ao Carrinho

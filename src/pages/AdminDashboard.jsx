@@ -155,6 +155,47 @@ export default function AdminDashboard() {
         </div>
     )
 
+    const [flavors, setFlavors] = useState([])
+    const [newFlavor, setNewFlavor] = useState('')
+
+    useEffect(() => {
+        if (view === 'flavors') {
+            fetchFlavors()
+        }
+    }, [view])
+
+    async function fetchFlavors() {
+        const { data } = await supabase.from('beverage_flavors').select('*').order('name')
+        if (data) setFlavors(data)
+    }
+
+    const toggleFlavorStatus = async (flavor) => {
+        const { error } = await supabase
+            .from('beverage_flavors')
+            .update({ is_active: !flavor.is_active })
+            .eq('id', flavor.id)
+
+        if (!error) fetchFlavors()
+    }
+
+    const addFlavor = async () => {
+        if (!newFlavor.trim()) return
+        const { error } = await supabase.from('beverage_flavors').insert({ name: newFlavor.trim() })
+        if (!error) {
+            setNewFlavor('')
+            fetchFlavors()
+        }
+    }
+
+    const deleteFlavor = async (id) => {
+        if (window.confirm('Tem certeza? Isso fará com que este sabor deixe de aparecer.')) {
+            const { error } = await supabase.from('beverage_flavors').delete().eq('id', id)
+            if (!error) fetchFlavors()
+        }
+    }
+
+    // ... existing modal logic ...
+
     return (
         <div className="min-h-screen bg-zinc-50 flex">
             {/* Sidebar (Desktop) */}
@@ -188,6 +229,13 @@ export default function AdminDashboard() {
                         Cardápio
                     </button>
                     <button
+                        onClick={() => setView('flavors')}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all ${view === 'flavors' ? 'bg-primary text-white shadow-lg' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
+                    >
+                        <CheckCircle2 className="w-5 h-5" />
+                        Sabores Bebidas
+                    </button>
+                    <button
                         onClick={() => setView('categories')}
                         className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all ${view === 'categories' ? 'bg-primary text-white shadow-lg' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
                     >
@@ -212,7 +260,7 @@ export default function AdminDashboard() {
                 <header className="bg-white border-b border-zinc-200 p-6 flex justify-between items-center sticky top-0 z-10 shadow-sm">
                     <div className="flex flex-col">
                         <h2 className="text-2xl font-black text-zinc-900 uppercase italic tracking-tighter">
-                            {view === 'orders' ? 'Monitor de Pedidos' : view === 'products' ? 'Gestão do Cardápio' : 'Gestão de Categorias'}
+                            {view === 'orders' ? 'Monitor de Pedidos' : view === 'products' ? 'Gestão do Cardápio' : view === 'flavors' ? 'Sabores de Bebidas' : 'Gestão de Categorias'}
                         </h2>
                         {view === 'orders' && (
                             <div className="flex items-center gap-2 mt-1">
@@ -224,7 +272,7 @@ export default function AdminDashboard() {
                             </div>
                         )}
                     </div>
-                    {view !== 'orders' && (
+                    {view !== 'orders' && view !== 'flavors' && (
                         <button
                             onClick={handleAdd}
                             className="btn-primary flex items-center gap-2 py-2 px-4 whitespace-nowrap"
@@ -415,6 +463,43 @@ export default function AdminDashboard() {
                                 </div>
                             </section>
                         ))
+                    ) : view === 'flavors' ? (
+                        <div className="space-y-6">
+                            <div className="flex gap-4">
+                                <input
+                                    value={newFlavor}
+                                    onChange={e => setNewFlavor(e.target.value)}
+                                    placeholder="Novo Sabor (ex: Fanta Uva)"
+                                    className="flex-1 p-3 rounded-xl border-2 border-zinc-100"
+                                />
+                                <button onClick={addFlavor} className="btn-primary px-6 rounded-xl font-bold">Adicionar</button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {flavors.map(flavor => (
+                                    <div key={flavor.id} className="bg-white border border-zinc-100 rounded-2xl p-4 flex items-center justify-between hover:shadow-lg transition-all">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-3 h-3 rounded-full ${flavor.is_active ? 'bg-green-500' : 'bg-red-500'}`} />
+                                            <span className="font-bold text-zinc-800">{flavor.name}</span>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => toggleFlavorStatus(flavor)}
+                                                className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider ${flavor.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
+                                            >
+                                                {flavor.is_active ? 'Ativo' : 'Pausado'}
+                                            </button>
+                                            <button
+                                                onClick={() => deleteFlavor(flavor.id)}
+                                                className="p-2 text-zinc-300 hover:text-red-500 transition-colors"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {categories.map(category => (
@@ -471,6 +556,13 @@ export default function AdminDashboard() {
                     >
                         <LayoutDashboard className="w-6 h-6" />
                         <span className="text-[10px] font-black uppercase tracking-tighter">Menu</span>
+                    </button>
+                    <button
+                        onClick={() => setView('flavors')}
+                        className={`flex flex-col items-center gap-1 p-2 transition-all ${view === 'flavors' ? 'text-secondary scale-110' : 'text-zinc-500'}`}
+                    >
+                        <CheckCircle2 className="w-6 h-6" />
+                        <span className="text-[10px] font-black uppercase tracking-tighter">Sabores</span>
                     </button>
                     <button
                         onClick={() => setView('categories')}
