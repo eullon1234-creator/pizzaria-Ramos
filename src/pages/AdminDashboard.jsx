@@ -15,6 +15,8 @@ export default function AdminDashboard() {
     const [categoryModalOpen, setCategoryModalOpen] = useState(false)
     const [editingProduct, setEditingProduct] = useState(null)
     const [editingCategory, setEditingCategory] = useState(null)
+    const [flavors, setFlavors] = useState([])
+    const [newFlavor, setNewFlavor] = useState('')
     const navigate = useNavigate()
     const audioRef = useRef(null)
 
@@ -47,6 +49,42 @@ export default function AdminDashboard() {
             supabase.removeChannel(channel)
         }
     }, [])
+
+    useEffect(() => {
+        if (view === 'flavors') {
+            fetchFlavors()
+        }
+    }, [view])
+
+    async function fetchFlavors() {
+        const { data } = await supabase.from('beverage_flavors').select('*').order('name')
+        if (data) setFlavors(data)
+    }
+
+    const toggleFlavorStatus = async (flavor) => {
+        const { error } = await supabase
+            .from('beverage_flavors')
+            .update({ is_active: !flavor.is_active })
+            .eq('id', flavor.id)
+
+        if (!error) fetchFlavors()
+    }
+
+    const addFlavor = async () => {
+        if (!newFlavor.trim()) return
+        const { error } = await supabase.from('beverage_flavors').insert({ name: newFlavor.trim() })
+        if (!error) {
+            setNewFlavor('')
+            fetchFlavors()
+        }
+    }
+
+    const deleteFlavor = async (id) => {
+        if (window.confirm('Tem certeza? Isso fará com que este sabor deixe de aparecer.')) {
+            const { error } = await supabase.from('beverage_flavors').delete().eq('id', id)
+            if (!error) fetchFlavors()
+        }
+    }
 
     async function checkUser() {
         const { data: { session } } = await supabase.auth.getSession()
@@ -154,45 +192,6 @@ export default function AdminDashboard() {
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-primary"></div>
         </div>
     )
-
-    const [flavors, setFlavors] = useState([])
-    const [newFlavor, setNewFlavor] = useState('')
-
-    useEffect(() => {
-        if (view === 'flavors') {
-            fetchFlavors()
-        }
-    }, [view])
-
-    async function fetchFlavors() {
-        const { data } = await supabase.from('beverage_flavors').select('*').order('name')
-        if (data) setFlavors(data)
-    }
-
-    const toggleFlavorStatus = async (flavor) => {
-        const { error } = await supabase
-            .from('beverage_flavors')
-            .update({ is_active: !flavor.is_active })
-            .eq('id', flavor.id)
-
-        if (!error) fetchFlavors()
-    }
-
-    const addFlavor = async () => {
-        if (!newFlavor.trim()) return
-        const { error } = await supabase.from('beverage_flavors').insert({ name: newFlavor.trim() })
-        if (!error) {
-            setNewFlavor('')
-            fetchFlavors()
-        }
-    }
-
-    const deleteFlavor = async (id) => {
-        if (window.confirm('Tem certeza? Isso fará com que este sabor deixe de aparecer.')) {
-            const { error } = await supabase.from('beverage_flavors').delete().eq('id', id)
-            if (!error) fetchFlavors()
-        }
-    }
 
     // ... existing modal logic ...
 
