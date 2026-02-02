@@ -16,7 +16,6 @@ export default function Checkout({ isOpen, onClose }) {
         horarioAgendado: ''
     })
 
-    const DELIVERY_FEE = 5.00
     const PIZZARIA_WHATSAPP = "5586994471909"
 
     const checkBusinessHours = () => {
@@ -66,8 +65,8 @@ export default function Checkout({ isOpen, onClose }) {
 
         message += `\n\n*💵 RESUMO FINANCEIRO:*\n`
         message += `Subtotal: R$ ${cartTotal.toFixed(2)}\n`
-        message += `Taxa de Entrega: R$ ${DELIVERY_FEE.toFixed(2)}\n`
-        message += `*TOTAL: R$ ${(cartTotal + DELIVERY_FEE).toFixed(2)}*`
+        message += `Entrega: Grátis\n`
+        message += `*TOTAL: R$ ${cartTotal.toFixed(2)}*`
 
         const encoded = encodeURIComponent(message)
         window.open(`https://wa.me/${PIZZARIA_WHATSAPP}?text=${encoded}`, '_blank')
@@ -103,8 +102,8 @@ export default function Checkout({ isOpen, onClose }) {
                         </div>
 
                         {/* Form */}
-                        <form onSubmit={handleSendOrder} className="flex-1 overflow-y-auto p-6 space-y-6">
-                            {/* Seção: Identificação */}
+                        <form onSubmit={handleSendOrder} className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide">
+                            {/* Identificação */}
                             <div className="space-y-4">
                                 <div className="flex items-center gap-2 text-primary">
                                     <User className="w-5 h-5" />
@@ -136,7 +135,7 @@ export default function Checkout({ isOpen, onClose }) {
                                 </div>
                             </div>
 
-                            {/* Seção: Endereço */}
+                            {/* Endereço */}
                             <div className="space-y-4 pt-4 border-t border-zinc-100">
                                 <div className="flex items-center gap-2 text-primary">
                                     <MapPin className="w-5 h-5" />
@@ -193,7 +192,7 @@ export default function Checkout({ isOpen, onClose }) {
                                 </div>
                             </div>
 
-                            {/* Seção: Horário */}
+                            {/* Agendamento */}
                             <div className="space-y-4 pt-4 border-t border-zinc-100">
                                 <div className="flex items-center gap-2 text-primary">
                                     <Clock className="w-5 h-5" />
@@ -234,16 +233,16 @@ export default function Checkout({ isOpen, onClose }) {
                             {/* Resumo */}
                             <div className="bg-zinc-900 rounded-2xl p-6 text-white space-y-2">
                                 <div className="flex justify-between text-xs text-zinc-400 font-bold uppercase tracking-widest">
-                                    <span>Itens</span>
+                                    <span>Subtotal</span>
                                     <span>R$ {cartTotal.toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between text-xs text-zinc-400 font-bold uppercase tracking-widest">
                                     <span>Entrega</span>
-                                    <span className="text-secondary">+ R$ {DELIVERY_FEE.toFixed(2)}</span>
+                                    <span className="text-secondary">Grátis</span>
                                 </div>
                                 <div className="flex justify-between items-center pt-2 border-t border-white/10 mt-2">
                                     <span className="font-black uppercase italic tracking-tighter text-lg">Total do Pedido</span>
-                                    <span className="text-2xl font-black text-secondary italic">R$ {(cartTotal + DELIVERY_FEE).toFixed(2)}</span>
+                                    <span className="text-2xl font-black text-secondary italic">R$ {cartTotal.toFixed(2)}</span>
                                 </div>
                             </div>
 
