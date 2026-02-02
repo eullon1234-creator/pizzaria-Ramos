@@ -307,9 +307,28 @@ export default function AdminDashboard() {
                                                         </div>
                                                     ))}
                                                 </div>
-                                                <div className="pt-2 border-t border-zinc-100 flex justify-between items-center text-zinc-900">
-                                                    <span className="text-xs font-black uppercase tracking-widest">Total Geral</span>
-                                                    <span className="text-xl font-black italic text-primary tracking-tighter">R$ {order.total.toFixed(2)}</span>
+
+                                                <div className="pt-2 border-t border-zinc-100 space-y-2">
+                                                    <div className="flex justify-between items-center bg-zinc-100 p-2 rounded-lg">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-sm font-bold text-zinc-800 capitalize flex items-center gap-1">
+                                                                {order.payment_method === 'pix' && '💠 PIX'}
+                                                                {order.payment_method === 'cartao' && '💳 Cartão'}
+                                                                {order.payment_method === 'dinheiro' && '💵 Dinheiro'}
+                                                            </span>
+                                                            {order.change_for && (
+                                                                <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-bold uppercase">
+                                                                    {order.change_for}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Pagamento</span>
+                                                    </div>
+
+                                                    <div className="flex justify-between items-center text-zinc-900 pt-1">
+                                                        <span className="text-xs font-black uppercase tracking-widest">Total Geral</span>
+                                                        <span className="text-xl font-black italic text-primary tracking-tighter">R$ {order.total?.toFixed(2)}</span>
+                                                    </div>
                                                 </div>
                                             </div>
 

@@ -15,7 +15,10 @@ export default function Checkout({ isOpen, onClose }) {
         bairro: '',
         pontoReferencia: '',
         tipoEntrega: 'imediata', // 'imediata' or 'agendada'
-        horarioAgendado: ''
+        horarioAgendado: '',
+        paymentMethod: 'pix', // 'pix', 'dinheiro', 'cartao'
+        needChange: false,
+        changeFor: ''
     })
 
     const PIZZARIA_WHATSAPP = "5586994471909"
@@ -81,7 +84,9 @@ export default function Checkout({ isOpen, onClose }) {
                     subtotal: cartTotal,
                     delivery_fee: 0,
                     total: cartTotal,
-                    status: 'pendente'
+                    status: 'pendente',
+                    payment_method: formData.paymentMethod,
+                    change_for: formData.needChange ? `Troco para R$ ${formData.changeFor}` : null
                 })
 
             if (orderError) throw orderError
@@ -120,7 +125,13 @@ export default function Checkout({ isOpen, onClose }) {
             message += `*🛒 ITENS DO PEDIDO:*\n`
             message += cart.map(item => `• ${item.quantity}x ${item.name} (${item.variation.size}) - R$ ${(item.variation.price * item.quantity).toFixed(2)}`).join('\n')
 
-            message += `\n\n*💵 RESUMO FINANCEIRO:*\n`
+            message += `\n\n*💵 PAGAMENTO:*\n`
+            message += `Forma: ${formData.paymentMethod === 'pix' ? 'PIX' : formData.paymentMethod === 'dinheiro' ? 'Dinheiro' : 'Cartão'}\n`
+            if (formData.paymentMethod === 'dinheiro') {
+                message += `Troco: ${formData.needChange ? `Para R$ ${formData.changeFor}` : 'Não precisa'}\n`
+            }
+
+            message += `\n*RESUMO FINANCEIRO:*\n`
             message += `Subtotal: R$ ${cartTotal.toFixed(2)}\n`
             message += `Entrega: Grátis\n`
             message += `*TOTAL: R$ ${cartTotal.toFixed(2)}*`
@@ -257,6 +268,82 @@ export default function Checkout({ isOpen, onClose }) {
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+
+                            {/* Pagamento */}
+                            <div className="space-y-4 pt-4 border-t border-zinc-100">
+                                <div className="flex items-center gap-2 text-primary">
+                                    <div className="text-xl font-black">$</div>
+                                    <h3 className="font-black uppercase italic text-sm tracking-wider">Forma de Pagamento</h3>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {['pix', 'dinheiro', 'cartao'].map(method => (
+                                        <label
+                                            key={method}
+                                            className={`p-4 rounded-2xl border-2 flex flex-col items-center justify-center gap-1 cursor-pointer transition-all ${formData.paymentMethod === method
+                                                ? 'border-primary bg-primary/5 ring-2 ring-primary/10'
+                                                : 'border-zinc-100 bg-zinc-50 hover:border-zinc-200'
+                                                }`}
+                                        >
+                                            <input
+                                                type="radio"
+                                                name="paymentMethod"
+                                                value={method}
+                                                checked={formData.paymentMethod === method}
+                                                onChange={e => setFormData({ ...formData, paymentMethod: e.target.value })}
+                                                className="hidden"
+                                            />
+                                            <span className="text-lg">
+                                                {method === 'pix' && '💠'}
+                                                {method === 'dinheiro' && '💵'}
+                                                {method === 'cartao' && '💳'}
+                                            </span>
+                                            <span className="text-[10px] font-black uppercase tracking-wider">
+                                                {method === 'cartao' ? 'Cartão' : method}
+                                            </span>
+                                        </label>
+                                    ))}
+                                </div>
+
+                                {formData.paymentMethod === 'dinheiro' && (
+                                    <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 space-y-3 animate-in fade-in slide-in-from-top-2">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-bold text-orange-900 uppercase">Precisa de troco?</span>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, needChange: false })}
+                                                    className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-colors ${!formData.needChange ? 'bg-orange-500 text-white' : 'bg-white text-orange-500'}`}
+                                                >
+                                                    Não
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, needChange: true })}
+                                                    className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-colors ${formData.needChange ? 'bg-orange-500 text-white' : 'bg-white text-orange-500'}`}
+                                                >
+                                                    Sim
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {formData.needChange && (
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black uppercase text-orange-400 tracking-widest ml-1">Troco para quanto?</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-500 font-bold">R$</span>
+                                                    <input
+                                                        type="number"
+                                                        value={formData.changeFor}
+                                                        onChange={e => setFormData({ ...formData, changeFor: e.target.value })}
+                                                        className="w-full bg-white border border-orange-100 rounded-xl pl-10 pr-4 py-2 outline-none focus:ring-2 focus:ring-orange-200 text-orange-900 font-bold"
+                                                        placeholder="0.00"
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Agendamento */}
