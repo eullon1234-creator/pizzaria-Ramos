@@ -2,9 +2,11 @@ import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, MapPin, Phone, User, Send, Clock, Info } from 'lucide-react'
 import { useCart } from '../context/CartContext'
+import { supabase } from '../lib/supabase'
 
 export default function Checkout({ isOpen, onClose }) {
-    const { cart, cartTotal } = useCart()
+    const { cart, cartTotal, clearCart } = useCart()
+    const [isSaving, setIsSaving] = useState(false)
     const [formData, setFormData] = useState({
         nome: '',
         whatsapp: '',
@@ -20,15 +22,13 @@ export default function Checkout({ isOpen, onClose }) {
 
     const checkBusinessHours = () => {
         const now = new Date()
-        const day = now.getDay() // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+        const day = now.getDay()
         const hours = now.getHours()
         const minutes = now.getMinutes()
         const currentTime = hours * 60 + minutes
 
-        // Closed on Monday (1)
         if (day === 1) return { open: false, reason: 'Estamos fechados hoje (Segunda-feira).' }
 
-        // Open from 18:00 (1080 min) to 23:30 (1410 min)
         const openTime = 18 * 60
         const closeTime = 23 * 60 + 30
 
@@ -39,7 +39,16 @@ export default function Checkout({ isOpen, onClose }) {
         return { open: true }
     }
 
-    const handleSendOrder = (e) => {
+    const generateOrderId = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+        let result = 'RAMOS-'
+        for (let i = 0; i < 4; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length))
+        }
+        return result
+    }
+
+    const handleSendOrder = async (e) => {
         e.preventDefault()
 
         const business = checkBusinessHours()
@@ -49,27 +58,82 @@ export default function Checkout({ isOpen, onClose }) {
             }
         }
 
-        let message = `*🍕 NOVO PEDIDO - PIZZARIA RAMOS*\n\n`
-        message += `*👤 CLIENTE:* ${formData.nome}\n`
-        message += `*📱 WHATSAPP:* ${formData.whatsapp}\n\n`
+        setIsSaving(true)
 
-        message += `*📍 ENDEREÇO DE ENTREGA:*\n`
-        message += `${formData.endereco}, ${formData.numero}\n`
-        message += `Bairro: ${formData.bairro}\n`
-        if (formData.pontoReferencia) message += `Ref: ${formData.pontoReferencia}\n\n`
+        try {
+            const orderId = generateOrderId()
 
-        message += `*🕒 ENTREGA:* ${formData.tipoEntrega === 'imediata' ? 'O mais rápido possível' : `Agendada para ${formData.horarioAgendado}`}\n\n`
+            // 1. Save order to Supabase
+            const { error: orderError } = await supabase
+                .from('orders')
+                .insert({
+                    id: orderId,
+                    user_name: formData.nome,
+                    user_phone: formData.whatsapp,
+                    delivery_address: {
+                        street: formData.endereco,
+                        number: formData.numero,
+                        neighborhood: formData.bairro,
+                        reference: formData.pontoReferencia
+                    },
+                    delivery_type: formData.tipoEntrega,
+                    scheduled_time: formData.horarioAgendado,
+                    total: cartTotal,
+                    status: 'pendente'
+                })
 
-        message += `*🛒 ITENS DO PEDIDO:*\n`
-        message += cart.map(item => `• ${item.quantity}x ${item.name} (${item.variation.size}) - R$ ${(item.variation.price * item.quantity).toFixed(2)}`).join('\n')
+            if (orderError) throw orderError
 
-        message += `\n\n*💵 RESUMO FINANCEIRO:*\n`
-        message += `Subtotal: R$ ${cartTotal.toFixed(2)}\n`
-        message += `Entrega: Grátis\n`
-        message += `*TOTAL: R$ ${cartTotal.toFixed(2)}*`
+            // 2. Save items to order_items
+            const orderItems = cart.map(item => ({
+                order_id: orderId,
+                flavor_1_id: item.id.startsWith('half-') ? null : item.id, // Handle regular vs half/half
+                item_type: item.id.startsWith('half-') ? 'meio-a-meio' : 'inteira',
+                quantity: item.quantity,
+                price: item.variation.price,
+                size_label: item.variation.size,
+                observations: item.name // Store full name as it contains the flavor details
+            }))
 
-        const encoded = encodeURIComponent(message)
-        window.open(`https://wa.me/${PIZZARIA_WHATSAPP}?text=${encoded}`, '_blank')
+            const { error: itemsError } = await supabase
+                .from('order_items')
+                .insert(orderItems)
+
+            if (itemsError) throw itemsError
+
+            // 3. Prepare WhatsApp message
+            let message = `*🍕 NOVO PEDIDO - PIZZARIA RAMOS*\n\n`
+            message += `*PEDIDO:* #${orderId}\n`
+            message += `*👤 CLIENTE:* ${formData.nome}\n`
+            message += `*📱 WHATSAPP:* ${formData.whatsapp}\n\n`
+
+            message += `*📍 ENDEREÇO DE ENTREGA:*\n`
+            message += `${formData.endereco}, ${formData.numero}\n`
+            message += `Bairro: ${formData.bairro}\n`
+            if (formData.pontoReferencia) message += `Ref: ${formData.pontoReferencia}\n\n`
+
+            message += `*🕒 ENTREGA:* ${formData.tipoEntrega === 'imediata' ? 'O mais rápido possível' : `Agendada para ${formData.horarioAgendado}`}\n\n`
+
+            message += `*🛒 ITENS DO PEDIDO:*\n`
+            message += cart.map(item => `• ${item.quantity}x ${item.name} (${item.variation.size}) - R$ ${(item.variation.price * item.quantity).toFixed(2)}`).join('\n')
+
+            message += `\n\n*💵 RESUMO FINANCEIRO:*\n`
+            message += `Subtotal: R$ ${cartTotal.toFixed(2)}\n`
+            message += `Entrega: Grátis\n`
+            message += `*TOTAL: R$ ${cartTotal.toFixed(2)}*`
+
+            const encoded = encodeURIComponent(message)
+            window.open(`https://wa.me/${PIZZARIA_WHATSAPP}?text=${encoded}`, '_blank')
+
+            // 4. Cleanup
+            clearCart()
+            onClose()
+        } catch (error) {
+            console.error('Error saving order:', error)
+            alert('Ops! Tivemos um problema ao processar seu pedido. Por favor, tente novamente.')
+        } finally {
+            setIsSaving(false)
+        }
     }
 
     return (
@@ -248,10 +312,20 @@ export default function Checkout({ isOpen, onClose }) {
 
                             <button
                                 type="submit"
-                                className="w-full bg-green-600 hover:bg-green-700 text-white py-5 rounded-2xl font-black text-lg uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl shadow-green-600/20 active:scale-95 transition-all"
+                                disabled={isSaving}
+                                className={`w-full py-5 rounded-2xl font-black text-lg uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl transition-all shadow-green-600/20 active:scale-95 ${isSaving ? 'bg-zinc-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white'}`}
                             >
-                                <Send className="w-6 h-6" />
-                                Enviar Pedido ao WhatsApp
+                                {isSaving ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-white"></div>
+                                        Processando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Send className="w-6 h-6" />
+                                        Enviar Pedido ao WhatsApp
+                                    </>
+                                )}
                             </button>
                         </form>
                     </motion.div>
