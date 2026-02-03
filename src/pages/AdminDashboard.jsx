@@ -1,14 +1,15 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
-import { Plus, Edit, Trash2, Power, Pizza, LayoutDashboard, LogOut, ChevronRight, Clock, MapPin, User, CheckCircle2, Package, Truck, XCircle, Bell, QrCode, DollarSign, Save, Upload } from 'lucide-react'
+import { Plus, Edit, Trash2, Power, Pizza, LayoutDashboard, LogOut, ChevronRight, Clock, MapPin, User, CheckCircle2, Package, Truck, XCircle, Bell, QrCode, DollarSign, Save, Upload, TrendingUp } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import ProductModal from '../components/ProductModal'
 import CategoryModal from '../components/CategoryModal'
 import PixSettingsModal from '../components/PixSettingsModal'
 import BusinessHoursModal from '../components/BusinessHoursModal'
+import StatsDashboard from '../components/StatsDashboard'
 
 export default function AdminDashboard() {
-    const [view, setView] = useState('orders') // default to orders
+    const [view, setView] = useState('stats') // Ver estatísticas primeiro ao entrar na gerência
     const [products, setProducts] = useState([])
     const [categories, setCategories] = useState([])
     const [orders, setOrders] = useState([])
@@ -308,6 +309,13 @@ export default function AdminDashboard() {
 
                 <nav className="flex-1 p-4 space-y-2">
                     <button
+                        onClick={() => setView('stats')}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all ${view === 'stats' ? 'bg-primary text-white shadow-lg' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
+                    >
+                        <TrendingUp className="w-5 h-5" />
+                        Estatísticas
+                    </button>
+                    <button
                         onClick={() => setView('orders')}
                         className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all ${view === 'orders' ? 'bg-primary text-white shadow-lg' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
                     >
@@ -365,7 +373,7 @@ export default function AdminDashboard() {
                 <header className="bg-white border-b border-zinc-200 p-6 flex justify-between items-center sticky top-0 z-10 shadow-sm">
                     <div className="flex flex-col">
                         <h2 className="text-2xl font-black text-zinc-900 uppercase italic tracking-tighter">
-                            {view === 'orders' ? 'Monitor de Pedidos' : view === 'products' ? 'Gestão do Cardápio' : view === 'flavors' ? 'Sabores de Bebidas' : view === 'pix' ? 'Configurações PIX' : 'Gestão de Categorias'}
+                            {view === 'orders' ? 'Monitor de Pedidos' : view === 'products' ? 'Gestão do Cardápio' : view === 'flavors' ? 'Sabores de Bebidas' : view === 'pix' ? 'Configurações PIX' : view === 'stats' ? 'Dashboard Gerencial' : 'Gestão de Categorias'}
                         </h2>
                         {view === 'orders' && (
                             <div className="flex items-center gap-4 mt-1">
@@ -397,7 +405,9 @@ export default function AdminDashboard() {
                 </header>
 
                 <div className="p-6 lg:p-10 space-y-8 no-scrollbar">
-                    {view === 'orders' ? (
+                    {view === 'stats' ? (
+                        <StatsDashboard />
+                    ) : view === 'orders' ? (
                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                             {orders.length === 0 ? (
                                 <div className="col-span-full py-20 text-center space-y-4">
@@ -832,6 +842,13 @@ export default function AdminDashboard() {
 
                 {/* Mobile Navigation */}
                 <div className="md:hidden fixed bottom-0 left-0 right-0 bg-zinc-900 border-t-2 border-secondary flex justify-around p-2 z-[100] safe-bottom">
+                    <button
+                        onClick={() => setView('stats')}
+                        className={`flex flex-col items-center gap-1 p-2 transition-all ${view === 'stats' ? 'text-secondary scale-110' : 'text-zinc-500'}`}
+                    >
+                        <TrendingUp className="w-6 h-6" />
+                        <span className="text-[10px] font-black uppercase tracking-tighter">Stats</span>
+                    </button>
                     <button
                         onClick={() => setView('orders')}
                         className={`flex flex-col items-center gap-1 p-2 transition-all ${view === 'orders' ? 'text-secondary scale-110' : 'text-zinc-500'}`}
