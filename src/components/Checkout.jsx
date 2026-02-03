@@ -236,12 +236,43 @@ export default function Checkout({ isOpen, onClose }) {
         })
     }
 
+    const calculateDeliveryTime = () => {
+        if (formData.tipoEntrega === 'agendada') {
+            return `Agendado para ${formData.horarioAgendado}`
+        }
+        // Entrega imediata: 45 min a 1h30min
+        return 'Entrega em 45 minutos a 1 hora e meia'
+    }
+
     const handleCopyPix = () => {
         if (pixSettings?.pix_key) {
             navigator.clipboard.writeText(pixSettings.pix_key)
             setCopiedPix(true)
             setTimeout(() => setCopiedPix(false), 2000)
         }
+    }
+
+    const handleSendWhatsAppMessage = () => {
+        const deliveryTime = calculateDeliveryTime()
+        
+        let message = `🍕 *Pizzaria Ramos*\n\n`
+        message += `Olá *${formData.nome}*! 👋\n`
+        message += `Seu pedido foi confirmado! ✅\n\n`
+        
+        message += `⏱️ *Tempo de entrega:*\n${deliveryTime}\n\n`
+        
+        if (formData.paymentMethod === 'pix' && pixSettings) {
+            message += `💠 *Chave PIX para pagamento:*\n`
+            message += `${pixSettings.pix_key}\n\n`
+            message += `👤 Titular: ${pixSettings.holder_name}\n`
+            message += `🏦 Banco: ${pixSettings.bank_name}\n\n`
+        }
+        
+        message += `Obrigado por escolher a Pizzaria Ramos! 🙏\n`
+        message += `Qualquer dúvida, nos chama! 😊`
+        
+        const encoded = encodeURIComponent(message)
+        window.open(`https://wa.me/${formData.whatsapp}?text=${encoded}`, '_blank')
     }
 
     const handleFinish = () => {
@@ -403,6 +434,15 @@ export default function Checkout({ isOpen, onClose }) {
                                 <h2 className="text-2xl font-black uppercase italic tracking-tighter text-zinc-800">Pedido Enviado!</h2>
                                 <p className="text-zinc-500 font-medium">Seu pedido foi registrado e enviado para nosso WhatsApp.</p>
 
+                                {/* Tempo de Entrega */}
+                                <div className="w-full bg-blue-50 border-2 border-blue-100 rounded-2xl p-4">
+                                    <div className="flex items-center justify-center gap-2 text-blue-600 font-black uppercase tracking-wider text-sm mb-2">
+                                        <Clock className="w-5 h-5" />
+                                        <span>Tempo de Entrega</span>
+                                    </div>
+                                    <p className="text-lg font-bold text-blue-900">{calculateDeliveryTime()}</p>
+                                </div>
+
                                 {formData.paymentMethod === 'pix' && (
                                     <div className="w-full bg-zinc-50 border-2 border-dashed border-zinc-200 rounded-2xl p-6 space-y-4">
                                         <div className="flex items-center justify-center gap-2 text-primary font-black uppercase tracking-wider text-sm">
@@ -456,12 +496,21 @@ export default function Checkout({ isOpen, onClose }) {
                                     </div>
                                 )}
 
-                                <button
-                                    onClick={handleFinish}
-                                    className="w-full py-4 bg-zinc-900 text-white rounded-xl font-black uppercase tracking-widest hover:bg-zinc-800 transition-colors"
-                                >
-                                    Fechar e Voltar ao Cardápio
-                                </button>
+                                <div className="grid grid-cols-2 gap-3 w-full">
+                                    <button
+                                        onClick={handleSendWhatsAppMessage}
+                                        className="py-3 bg-green-500 text-white rounded-xl font-black uppercase tracking-widest hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <Send className="w-5 h-5" />
+                                        <span className="hidden sm:inline">Enviar</span>
+                                    </button>
+                                    <button
+                                        onClick={handleFinish}
+                                        className="py-3 bg-zinc-900 text-white rounded-xl font-black uppercase tracking-widest hover:bg-zinc-800 transition-colors"
+                                    >
+                                        Fechar
+                                    </button>
+                                </div>
                             </div>
                         ) : (
                             <>
