@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
-import { Plus, Edit, Trash2, Power, Pizza, LayoutDashboard, LogOut, ChevronRight, Clock, MapPin, User, CheckCircle2, Package, Truck, XCircle, Bell, QrCode, DollarSign, Save, Upload, TrendingUp } from 'lucide-react'
+import { Plus, Edit, Trash2, Power, Pizza, LayoutDashboard, LogOut, ChevronRight, Clock, MapPin, User, CheckCircle2, Package, Truck, XCircle, Bell, QrCode, DollarSign, Save, Upload, TrendingUp, Search, MessageCircle, Filter } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import ProductModal from '../components/ProductModal'
 import CategoryModal from '../components/CategoryModal'
@@ -24,6 +24,9 @@ export default function AdminDashboard() {
     const [newFlavor, setNewFlavor] = useState('')
     const [pixSettings, setPixSettings] = useState(null)
     const [savingPix, setSavingPix] = useState(false)
+    const [searchQuery, setSearchQuery] = useState('')
+    const [statusFilter, setStatusFilter] = useState('todos')
+    const [currentTime, setCurrentTime] = useState(new Date())
 
     const AVAILABLE_SIZES = ['Lata 350ml', '1 Litro', '1.5 Litro', '2 Litros']
     const navigate = useNavigate()
@@ -54,8 +57,14 @@ export default function AdminDashboard() {
             })
             .subscribe()
 
+        // Update clock every minute for timers
+        const timerInterval = setInterval(() => {
+            setCurrentTime(new Date())
+        }, 60000)
+
         return () => {
             supabase.removeChannel(channel)
+            clearInterval(timerInterval)
         }
     }, [])
 
@@ -289,6 +298,52 @@ export default function AdminDashboard() {
         }
     }
 
+    const getTimeElapsed = (createdAt) => {
+        const diff = currentTime - new Date(createdAt)
+        const minutes = Math.floor(diff / 60000)
+
+        if (minutes < 1) return 'Agora'
+        if (minutes < 60) return `${minutes} min`
+        const hours = Math.floor(minutes / 60)
+        const mins = minutes % 60
+        return `${hours}h ${mins}m`
+    }
+
+    const getTimerColor = (createdAt, status) => {
+        if (status === 'entregue' || status === 'cancelado') return 'text-zinc-400'
+        const diff = currentTime - new Date(createdAt)
+        const minutes = Math.floor(diff / 60000)
+
+        if (minutes > 50) return 'text-red-500 font-black animate-pulse'
+        if (minutes > 30) return 'text-orange-500 font-bold'
+        return 'text-green-600 font-bold'
+    }
+
+    const sendWhatsAppMessage = (phone, name, type) => {
+        let message = ''
+        const cleanPhone = phone.replace(/\D/g, '')
+
+        if (type === 'saida') {
+            message = `Olá ${name}! Seu pedido da Ramos Pizza acabou de sair para entrega! 🛵💨`
+        } else if (type === 'pronto') {
+            message = `Olá ${name}! Seu pedido já está pronto e aguardando para ser entregue/retirado! 🍕✅`
+        }
+
+        const url = `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`
+        window.open(url, '_blank')
+    }
+
+    const filteredOrders = orders.filter(order => {
+        const matchesSearch =
+            order.user_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            order.user_phone?.includes(searchQuery) ||
+            order.sequential_num?.toString().includes(searchQuery)
+
+        const matchesStatus = statusFilter === 'todos' || order.status === statusFilter
+
+        return matchesSearch && matchesStatus
+    })
+
     if (loading) return (
         <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-primary"></div>
@@ -408,143 +463,209 @@ export default function AdminDashboard() {
                     {view === 'stats' ? (
                         <StatsDashboard />
                     ) : view === 'orders' ? (
-                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                            {orders.length === 0 ? (
-                                <div className="col-span-full py-20 text-center space-y-4">
-                                    <div className="bg-zinc-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto text-zinc-300">
-                                        <Package className="w-10 h-10" />
-                                    </div>
-                                    <h3 className="text-xl font-bold text-zinc-400 uppercase tracking-widest italic">Nenhum pedido hoje</h3>
+                        <div className="space-y-6">
+                            {/* Controls Row */}
+                            <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-3xl border border-zinc-100 shadow-sm">
+                                <div className="flex-1 min-w-[300px] relative">
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 w-5 h-5" />
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar por cliente, pedido ou telefone..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="w-full pl-12 pr-4 py-3 bg-zinc-50 border-2 border-transparent focus:border-primary/20 focus:bg-white rounded-2xl outline-none transition-all font-bold text-zinc-700"
+                                    />
                                 </div>
-                            ) : (
-                                orders.map(order => (
-                                    <div
-                                        key={order.id}
-                                        className={`bg-white rounded-3xl overflow-hidden shadow-md border-2 transition-all hover:shadow-xl ${order.status === 'pendente' ? 'border-primary ring-4 ring-primary/5' : 'border-zinc-100'}`}
-                                    >
-                                        <div className={`px-6 py-4 flex justify-between items-center border-b ${getStatusStyles(order.status)}`}>
-                                            <div className="flex items-center gap-2">
-                                                <Clock className="w-4 h-4" />
-                                                <span className="text-xs font-black uppercase tracking-[0.2em]">PEDIDO #{order.sequential_num || '...'} • {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                            </div>
-                                            <span className="text-[10px] font-black uppercase tracking-widest italic">{order.status}</span>
+                                <div className="flex bg-zinc-100 p-1 rounded-2xl gap-1 overflow-x-auto no-scrollbar max-w-full">
+                                    {[
+                                        { id: 'todos', label: 'Todos' },
+                                        { id: 'pendente', label: 'Pendentes' },
+                                        { id: 'preparando', label: 'Cozinha' },
+                                        { id: 'entrega', label: 'Entrega' },
+                                        { id: 'entregue', label: 'Concluídos' }
+                                    ].map(f => (
+                                        <button
+                                            key={f.id}
+                                            onClick={() => setStatusFilter(f.id)}
+                                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${statusFilter === f.id ? 'bg-white shadow-sm text-primary' : 'text-zinc-500 hover:text-zinc-700'}`}
+                                        >
+                                            {f.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                                {filteredOrders.length === 0 ? (
+                                    <div className="col-span-full py-20 text-center space-y-4">
+                                        <div className="bg-zinc-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto text-zinc-300">
+                                            <Package className="w-10 h-10" />
                                         </div>
-
-                                        <div className="p-6 space-y-6">
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="space-y-1">
-                                                    <div className="flex items-center gap-1 text-zinc-400">
-                                                        <User className="w-3 h-3" />
-                                                        <span className="text-[10px] font-black uppercase tracking-widest">Cliente</span>
-                                                    </div>
-                                                    <p className="font-bold text-zinc-900 leading-tight">{order.user_name}</p>
-                                                    <p className="text-xs text-secondary font-black">{order.user_phone}</p>
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <div className="flex items-center gap-1 text-zinc-400">
-                                                        <MapPin className="w-3 h-3" />
-                                                        <span className="text-[10px] font-black uppercase tracking-widest">Endereço</span>
-                                                    </div>
-                                                    <p className="text-xs font-medium text-zinc-600 leading-tight">
-                                                        {order.delivery_address.street}, {order.delivery_address.number}<br />
-                                                        {order.delivery_address.neighborhood}
-                                                    </p>
-                                                    {order.delivery_address.reference && (
-                                                        <p className="text-[10px] text-zinc-400 italic font-medium">Ref: {order.delivery_address.reference}</p>
-                                                    )}
-                                                    {order.delivery_address.location_link && (
-                                                        <a
-                                                            href={order.delivery_address.location_link}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="flex items-center gap-1 text-[10px] text-blue-600 font-bold uppercase mt-1 hover:underline"
-                                                        >
-                                                            <MapPin className="w-3 h-3" />
-                                                            Ver no Mapa
-                                                        </a>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            <div className="bg-zinc-50 rounded-2xl p-4 space-y-3">
-                                                <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 border-b border-zinc-100 pb-2 flex justify-between">
-                                                    Itens do Pedido
-                                                    <span>{order.order_items?.length || 0} itens</span>
-                                                </h4>
-                                                <div className="space-y-2">
-                                                    {(order.order_items || []).map((item, idx) => (
-                                                        <div key={idx} className="flex justify-between items-start gap-4 text-sm">
-                                                            <div className="flex-1">
-                                                                <span className="font-black text-primary mr-2 uppercase tracking-tighter text-xs">{item.quantity}X</span>
-                                                                <span className="font-bold text-zinc-800 block">{item.observations}</span>
-                                                                {item.product_description && (
-                                                                    <p className="text-[10px] text-zinc-500 font-medium italic mt-0.5 mb-1 leading-tight">{item.product_description}</p>
-                                                                )}
-                                                                <span className="text-[10px] font-black text-secondary px-1 bg-secondary/10 rounded uppercase">{item.size_label}</span>
-                                                            </div>
-                                                            <span className="font-bold text-zinc-500 whitespace-nowrap">R$ {(item.price * item.quantity).toFixed(2)}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-
-                                                <div className="pt-2 border-t border-zinc-100 space-y-2">
-                                                    <div className="flex justify-between items-center bg-zinc-100 p-2 rounded-lg">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-sm font-bold text-zinc-800 capitalize flex items-center gap-1">
-                                                                {order.payment_method === 'pix' && '💠 PIX'}
-                                                                {order.payment_method === 'cartao' && '💳 Cartão'}
-                                                                {order.payment_method === 'dinheiro' && '💵 Dinheiro'}
-                                                            </span>
-                                                            {order.change_for && (
-                                                                <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-bold uppercase">
-                                                                    {order.change_for}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Pagamento</span>
-                                                    </div>
-
-                                                    <div className="flex justify-between items-center text-zinc-900 pt-1">
-                                                        <span className="text-xs font-black uppercase tracking-widest">Total Geral</span>
-                                                        <span className="text-xl font-black italic text-primary tracking-tighter">R$ {order.total?.toFixed(2)}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                                <button
-                                                    onClick={() => updateOrderStatus(order.id, 'preparando')}
-                                                    className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1 ${order.status === 'preparando' ? 'border-blue-500 bg-blue-50 text-blue-600' : 'border-zinc-50 bg-zinc-50 text-zinc-400 hover:border-zinc-200'}`}
-                                                >
-                                                    <CheckCircle2 className="w-5 h-5" />
-                                                    <span className="text-[10px] font-black uppercase tracking-tighter">Preparo</span>
-                                                </button>
-                                                <button
-                                                    onClick={() => updateOrderStatus(order.id, 'entrega')}
-                                                    className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1 ${order.status === 'entrega' ? 'border-purple-500 bg-purple-50 text-purple-600' : 'border-zinc-50 bg-zinc-50 text-zinc-400 hover:border-zinc-200'}`}
-                                                >
-                                                    <Truck className="w-5 h-5" />
-                                                    <span className="text-[10px] font-black uppercase tracking-tighter">Entrega</span>
-                                                </button>
-                                                <button
-                                                    onClick={() => updateOrderStatus(order.id, 'entregue')}
-                                                    className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1 ${order.status === 'entregue' ? 'border-green-500 bg-green-50 text-green-600' : 'border-zinc-50 bg-zinc-50 text-zinc-400 hover:border-zinc-200'}`}
-                                                >
-                                                    <CheckCircle2 className="w-5 h-5" />
-                                                    <span className="text-[10px] font-black uppercase tracking-tighter">Finalizar</span>
-                                                </button>
-                                                <button
-                                                    onClick={() => updateOrderStatus(order.id, 'cancelado')}
-                                                    className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1 ${order.status === 'cancelado' ? 'border-red-500 bg-red-50 text-red-600' : 'border-zinc-50 bg-zinc-50 text-zinc-400 hover:border-zinc-200'}`}
-                                                >
-                                                    <XCircle className="w-5 h-5" />
-                                                    <span className="text-[10px] font-black uppercase tracking-tighter">Cancelar</span>
-                                                </button>
-                                            </div>
-                                        </div>
+                                        <h3 className="text-xl font-bold text-zinc-400 uppercase tracking-widest italic">Nenhum pedido hoje</h3>
                                     </div>
-                                ))
-                            )}
+                                ) : (
+                                    filteredOrders.map(order => (
+                                        <div
+                                            key={order.id}
+                                            className={`bg-white rounded-3xl overflow-hidden shadow-md border-2 transition-all hover:shadow-xl ${order.status === 'pendente' ? 'border-primary ring-4 ring-primary/5 animate-pulse-subtle' : 'border-zinc-100'}`}
+                                        >
+                                            <style dangerouslySetInnerHTML={{
+                                                __html: `
+                                            @keyframes pulse-subtle {
+                                                0%, 100% { opacity: 1; transform: scale(1); }
+                                                50% { opacity: 0.98; transform: scale(0.995); }
+                                            }
+                                            .animate-pulse-subtle {
+                                                animation: pulse-subtle 2s infinite ease-in-out;
+                                            }
+                                        ` }} />
+                                            <div className={`px-6 py-4 flex justify-between items-center border-b ${getStatusStyles(order.status)}`}>
+                                                <div className="flex items-center gap-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <Clock className="w-4 h-4" />
+                                                        <span className="text-xs font-black uppercase tracking-[0.2em]">PEDIDO #{order.sequential_num || '...'} • {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                    </div>
+                                                    <div className={`px-3 py-1 bg-white/50 rounded-full text-[10px] font-black uppercase tracking-widest ${getTimerColor(order.created_at, order.status)}`}>
+                                                        ⏱️ {getTimeElapsed(order.created_at)}
+                                                    </div>
+                                                </div>
+                                                <span className="text-[10px] font-black uppercase tracking-widest italic">{order.status}</span>
+                                            </div>
+
+                                            <div className="p-6 space-y-6">
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center gap-1 text-zinc-400">
+                                                            <User className="w-3 h-3" />
+                                                            <span className="text-[10px] font-black uppercase tracking-widest">Cliente</span>
+                                                        </div>
+                                                        <p className="font-bold text-zinc-900 leading-tight">{order.user_name}</p>
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="text-xs text-secondary font-black">{order.user_phone}</p>
+                                                            <div className="flex gap-1">
+                                                                <button
+                                                                    onClick={() => sendWhatsAppMessage(order.user_phone, order.user_name, 'pronto')}
+                                                                    className="p-1.5 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors"
+                                                                    title="Avisar que está pronto"
+                                                                >
+                                                                    <MessageCircle className="w-3 h-3" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => sendWhatsAppMessage(order.user_phone, order.user_name, 'saida')}
+                                                                    className="p-1.5 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+                                                                    title="Avisar que saiu para entrega"
+                                                                >
+                                                                    <Truck className="w-3 h-3" />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center gap-1 text-zinc-400">
+                                                            <MapPin className="w-3 h-3" />
+                                                            <span className="text-[10px] font-black uppercase tracking-widest">Endereço</span>
+                                                        </div>
+                                                        <p className="text-xs font-medium text-zinc-600 leading-tight">
+                                                            {order.delivery_address.street}, {order.delivery_address.number}<br />
+                                                            {order.delivery_address.neighborhood}
+                                                        </p>
+                                                        {order.delivery_address.reference && (
+                                                            <p className="text-[10px] text-zinc-400 italic font-medium">Ref: {order.delivery_address.reference}</p>
+                                                        )}
+                                                        {order.delivery_address.location_link && (
+                                                            <a
+                                                                href={order.delivery_address.location_link}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="flex items-center gap-1 text-[10px] text-blue-600 font-bold uppercase mt-1 hover:underline"
+                                                            >
+                                                                <MapPin className="w-3 h-3" />
+                                                                Ver no Mapa
+                                                            </a>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="bg-zinc-50 rounded-2xl p-4 space-y-3">
+                                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 border-b border-zinc-100 pb-2 flex justify-between">
+                                                        Itens do Pedido
+                                                        <span>{order.order_items?.length || 0} itens</span>
+                                                    </h4>
+                                                    <div className="space-y-2">
+                                                        {(order.order_items || []).map((item, idx) => (
+                                                            <div key={idx} className="flex justify-between items-start gap-4 text-sm">
+                                                                <div className="flex-1">
+                                                                    <span className="font-black text-primary mr-2 uppercase tracking-tighter text-xs">{item.quantity}X</span>
+                                                                    <span className="font-bold text-zinc-800 block">{item.observations}</span>
+                                                                    {item.product_description && (
+                                                                        <p className="text-[10px] text-zinc-500 font-medium italic mt-0.5 mb-1 leading-tight">{item.product_description}</p>
+                                                                    )}
+                                                                    <span className="text-[10px] font-black text-secondary px-1 bg-secondary/10 rounded uppercase">{item.size_label}</span>
+                                                                </div>
+                                                                <span className="font-bold text-zinc-500 whitespace-nowrap">R$ {(item.price * item.quantity).toFixed(2)}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+
+                                                    <div className="pt-2 border-t border-zinc-100 space-y-2">
+                                                        <div className="flex justify-between items-center bg-zinc-100 p-2 rounded-lg">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-sm font-bold text-zinc-800 capitalize flex items-center gap-1">
+                                                                    {order.payment_method === 'pix' && '💠 PIX'}
+                                                                    {order.payment_method === 'cartao' && '💳 Cartão'}
+                                                                    {order.payment_method === 'dinheiro' && '💵 Dinheiro'}
+                                                                </span>
+                                                                {order.change_for && (
+                                                                    <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-bold uppercase">
+                                                                        {order.change_for}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Pagamento</span>
+                                                        </div>
+
+                                                        <div className="flex justify-between items-center text-zinc-900 pt-1">
+                                                            <span className="text-xs font-black uppercase tracking-widest">Total Geral</span>
+                                                            <span className="text-xl font-black italic text-primary tracking-tighter">R$ {order.total?.toFixed(2)}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                                    <button
+                                                        onClick={() => updateOrderStatus(order.id, 'preparando')}
+                                                        className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1 ${order.status === 'preparando' ? 'border-blue-500 bg-blue-50 text-blue-600' : 'border-zinc-50 bg-zinc-50 text-zinc-400 hover:border-zinc-200'}`}
+                                                    >
+                                                        <CheckCircle2 className="w-5 h-5" />
+                                                        <span className="text-[10px] font-black uppercase tracking-tighter">Preparo</span>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => updateOrderStatus(order.id, 'entrega')}
+                                                        className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1 ${order.status === 'entrega' ? 'border-purple-500 bg-purple-50 text-purple-600' : 'border-zinc-50 bg-zinc-50 text-zinc-400 hover:border-zinc-200'}`}
+                                                    >
+                                                        <Truck className="w-5 h-5" />
+                                                        <span className="text-[10px] font-black uppercase tracking-tighter">Entrega</span>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => updateOrderStatus(order.id, 'entregue')}
+                                                        className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1 ${order.status === 'entregue' ? 'border-green-500 bg-green-50 text-green-600' : 'border-zinc-50 bg-zinc-50 text-zinc-400 hover:border-zinc-200'}`}
+                                                    >
+                                                        <CheckCircle2 className="w-5 h-5" />
+                                                        <span className="text-[10px] font-black uppercase tracking-tighter">Finalizar</span>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => updateOrderStatus(order.id, 'cancelado')}
+                                                        className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1 ${order.status === 'cancelado' ? 'border-red-500 bg-red-50 text-red-600' : 'border-zinc-50 bg-zinc-50 text-zinc-400 hover:border-zinc-200'}`}
+                                                    >
+                                                        <XCircle className="w-5 h-5" />
+                                                        <span className="text-[10px] font-black uppercase tracking-tighter">Cancelar</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
                         </div>
                     ) : view === 'products' ? (
                         categories.map(category => (
