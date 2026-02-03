@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, MapPin, User, Send, Clock, LocateFixed, Copy, Check, CreditCard } from 'lucide-react'
+import { X, MapPin, User, Send, Clock, LocateFixed, Copy, Check, CreditCard, Save } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { supabase } from '../lib/supabase'
 
@@ -11,6 +11,8 @@ export default function Checkout({ isOpen, onClose }) {
     const [orderSuccess, setOrderSuccess] = useState(false)
     const [copiedPix, setCopiedPix] = useState(false)
     const [pixSettings, setPixSettings] = useState(null)
+    const [saveData, setSaveData] = useState(false)
+    const [hasStoredData, setHasStoredData] = useState(false)
     const [formData, setFormData] = useState({
         nome: '',
         whatsapp: '',
@@ -27,16 +29,65 @@ export default function Checkout({ isOpen, onClose }) {
     })
 
     const PIZZARIA_WHATSAPP = "5586994471909"
+    const STORAGE_KEY = 'pizzaria_ramos_customer_data'
 
     useEffect(() => {
         if (isOpen) {
             fetchPixSettings()
+            loadSavedData()
         } else {
             // Reset states when modal re-opens
             setOrderSuccess(false)
             setCopiedPix(false)
         }
     }, [isOpen])
+
+    const loadSavedData = () => {
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY)
+            if (saved) {
+                const parsedData = JSON.parse(saved)
+                setFormData(prev => ({
+                    ...prev,
+                    nome: parsedData.nome || '',
+                    whatsapp: parsedData.whatsapp || '',
+                    endereco: parsedData.endereco || '',
+                    numero: parsedData.numero || '',
+                    bairro: parsedData.bairro || '',
+                    pontoReferencia: parsedData.pontoReferencia || '',
+                }))
+                setHasStoredData(true)
+                setSaveData(true)
+            }
+        } catch (error) {
+            console.error('Error loading saved data:', error)
+        }
+    }
+
+    const saveCustomerData = () => {
+        try {
+            const dataToSave = {
+                nome: formData.nome,
+                whatsapp: formData.whatsapp,
+                endereco: formData.endereco,
+                numero: formData.numero,
+                bairro: formData.bairro,
+                pontoReferencia: formData.pontoReferencia,
+            }
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave))
+        } catch (error) {
+            console.error('Error saving data:', error)
+        }
+    }
+
+    const clearSavedData = () => {
+        try {
+            localStorage.removeItem(STORAGE_KEY)
+            setHasStoredData(false)
+        } catch (error) {
+            console.error('Error clearing data:', error)
+        }
+    }
 
     const fetchPixSettings = async () => {
         try {
@@ -158,6 +209,25 @@ export default function Checkout({ isOpen, onClose }) {
 
     const handleSendOrder = async (e) => {
         e.preventDefault()
+
+        // Ask user if they want to save their data (only if not already saved and checkbox is checked)
+        if (saveData && !hasStoredData) {
+            const confirmSave = window.confirm(
+                '💾 Deseja salvar seus dados?\n\n' +
+                'Ao salvar, seus dados pessoais e endereço ficarão preenchidos automaticamente nas próximas compras, tornando o processo muito mais rápido!\n\n' +
+                'Clique em "OK" para salvar ou "Cancelar" para não salvar.'
+            )
+
+            if (confirmSave) {
+                saveCustomerData()
+            }
+        } else if (saveData && hasStoredData) {
+            // Update existing saved data
+            saveCustomerData()
+        } else if (!saveData && hasStoredData) {
+            // User unchecked the box, clear saved data
+            clearSavedData()
+        }
 
         const business = checkBusinessHours()
         if (!business.open && formData.tipoEntrega === 'imediata') {
@@ -381,6 +451,32 @@ export default function Checkout({ isOpen, onClose }) {
                                                     placeholder="(86) 9...."
                                                 />
                                             </div>
+                                        </div>
+
+                                        {/* Save Data Checkbox */}
+                                        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mt-4">
+                                            <label className="flex items-start gap-3 cursor-pointer group">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={saveData}
+                                                    onChange={(e) => setSaveData(e.target.checked)}
+                                                    className="mt-0.5 w-5 h-5 rounded border-2 border-blue-300 text-primary focus:ring-2 focus:ring-primary cursor-pointer"
+                                                />
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <Save className="w-4 h-4 text-blue-600" />
+                                                        <span className="font-black text-sm text-blue-900 uppercase tracking-wide">
+                                                            {hasStoredData ? 'Manter dados salvos' : 'Salvar meus dados'}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-xs text-blue-700 mt-1 leading-relaxed">
+                                                        {hasStoredData
+                                                            ? 'Seus dados já estão salvos. Desmarque para apagar.'
+                                                            : 'Salve seus dados para preencher automaticamente nas próximas compras e economizar tempo!'
+                                                        }
+                                                    </p>
+                                                </div>
+                                            </label>
                                         </div>
                                     </div>
 
