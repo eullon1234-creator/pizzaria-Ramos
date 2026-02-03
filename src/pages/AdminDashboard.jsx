@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
-import { Plus, Edit, Trash2, Power, Pizza, LayoutDashboard, LogOut, ChevronRight, Clock, MapPin, User, CheckCircle2, Package, Truck, XCircle, Bell } from 'lucide-react'
+import { Plus, Edit, Trash2, Power, Pizza, LayoutDashboard, LogOut, ChevronRight, Clock, MapPin, User, CheckCircle2, Package, Truck, XCircle, Bell, QrCode, DollarSign, Save, Upload } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import ProductModal from '../components/ProductModal'
 import CategoryModal from '../components/CategoryModal'
@@ -17,6 +17,8 @@ export default function AdminDashboard() {
     const [editingCategory, setEditingCategory] = useState(null)
     const [flavors, setFlavors] = useState([])
     const [newFlavor, setNewFlavor] = useState('')
+    const [pixSettings, setPixSettings] = useState(null)
+    const [savingPix, setSavingPix] = useState(false)
 
     const AVAILABLE_SIZES = ['Lata 350ml', '1 Litro', '1.5 Litro', '2 Litros']
     const navigate = useNavigate()
@@ -55,6 +57,8 @@ export default function AdminDashboard() {
     useEffect(() => {
         if (view === 'flavors') {
             fetchFlavors()
+        } else if (view === 'pix') {
+            fetchPixSettings()
         }
     }, [view])
 
@@ -106,6 +110,67 @@ export default function AdminDashboard() {
         if (window.confirm('Tem certeza? Isso fará com que este sabor deixe de aparecer.')) {
             const { error } = await supabase.from('beverage_flavors').delete().eq('id', id)
             if (!error) fetchFlavors()
+        }
+    }
+
+    async function fetchPixSettings() {
+        const { data } = await supabase.from('pix_settings').select('*').limit(1).single()
+        if (data) {
+            setPixSettings(data)
+        } else {
+            // Create default if doesn't exist
+            const { data: newData } = await supabase
+                .from('pix_settings')
+                .insert({ pix_key: '', is_active: true })
+                .select()
+                .single()
+            setPixSettings(newData)
+        }
+    }
+
+    const updatePixSettings = async () => {
+        if (!pixSettings) return
+        setSavingPix(true)
+        const { error } = await supabase
+            .from('pix_settings')
+            .update({
+                pix_key: pixSettings.pix_key,
+                qr_code_url: pixSettings.qr_code_url,
+                is_active: pixSettings.is_active
+            })
+            .eq('id', pixSettings.id)
+
+        if (!error) {
+            alert('✅ Configurações PIX salvas com sucesso!')
+        } else {
+            alert('❌ Erro ao salvar configurações PIX')
+        }
+        setSavingPix(false)
+    }
+
+    const handleQrCodeUpload = async (e) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        try {
+            const fileExt = file.name.split('.').pop()
+            const fileName = `qr-code-${Date.now()}.${fileExt}`
+            const filePath = `pix/${fileName}`
+
+            const { error: uploadError } = await supabase.storage
+                .from('images')
+                .upload(filePath, file)
+
+            if (uploadError) throw uploadError
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('images')
+                .getPublicUrl(filePath)
+
+            setPixSettings({ ...pixSettings, qr_code_url: publicUrl })
+        } catch (error) {
+            console.error('Error uploading QR Code:', error)
+            alert('Erro ao fazer upload do QR Code')
         }
     }
 
@@ -264,6 +329,13 @@ export default function AdminDashboard() {
                         <Pizza className="w-5 h-5" />
                         Categorias
                     </button>
+                    <button
+                        onClick={() => setView('pix')}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all ${view === 'pix' ? 'bg-primary text-white shadow-lg' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
+                    >
+                        <QrCode className="w-5 h-5" />
+                        Configurar PIX
+                    </button>
                 </nav>
 
                 <div className="p-4 border-t border-zinc-800">
@@ -282,7 +354,7 @@ export default function AdminDashboard() {
                 <header className="bg-white border-b border-zinc-200 p-6 flex justify-between items-center sticky top-0 z-10 shadow-sm">
                     <div className="flex flex-col">
                         <h2 className="text-2xl font-black text-zinc-900 uppercase italic tracking-tighter">
-                            {view === 'orders' ? 'Monitor de Pedidos' : view === 'products' ? 'Gestão do Cardápio' : view === 'flavors' ? 'Sabores de Bebidas' : 'Gestão de Categorias'}
+                            {view === 'orders' ? 'Monitor de Pedidos' : view === 'products' ? 'Gestão do Cardápio' : view === 'flavors' ? 'Sabores de Bebidas' : view === 'pix' ? 'Configurações PIX' : 'Gestão de Categorias'}
                         </h2>
                         {view === 'orders' && (
                             <div className="flex items-center gap-2 mt-1">
@@ -294,7 +366,7 @@ export default function AdminDashboard() {
                             </div>
                         )}
                     </div>
-                    {view !== 'orders' && view !== 'flavors' && (
+                    {view !== 'orders' && view !== 'flavors' && view !== 'pix' && (
                         <button
                             onClick={handleAdd}
                             className="btn-primary flex items-center gap-2 py-2 px-4 whitespace-nowrap"
@@ -541,6 +613,129 @@ export default function AdminDashboard() {
                                 ))}
                             </div>
                         </div>
+                    ) : view === 'pix' ? (
+                        <div className="max-w-2xl mx-auto space-y-6">
+                            {pixSettings && (
+                                <>
+                                    {/* QR Code Section */}
+                                    <div className="bg-white border border-zinc-100 rounded-3xl p-8 space-y-6">
+                                        <div className="flex items-center gap-3 pb-4 border-b border-zinc-100">
+                                            <div className="bg-primary/10 p-3 rounded-xl">
+                                                <QrCode className="w-6 h-6 text-primary" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-xl font-black uppercase italic tracking-tighter text-zinc-900">QR Code PIX</h3>
+                                                <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">Imagem que o cliente vai escanear</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-col items-center gap-6">
+                                            {pixSettings.qr_code_url ? (
+                                                <div className="relative group">
+                                                    <img
+                                                        src={pixSettings.qr_code_url}
+                                                        alt="QR Code PIX"
+                                                        className="w-64 h-64 object-contain border-4 border-zinc-100 rounded-2xl bg-white shadow-lg"
+                                                    />
+                                                    <button
+                                                        onClick={() => setPixSettings({ ...pixSettings, qr_code_url: '' })}
+                                                        className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="w-64 h-64 border-4 border-dashed border-zinc-200 rounded-2xl flex items-center justify-center bg-zinc-50">
+                                                    <div className="text-center space-y-2">
+                                                        <QrCode className="w-16 h-16 text-zinc-300 mx-auto" />
+                                                        <p className="text-sm text-zinc-400 font-bold">Nenhum QR Code</p>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <label className="cursor-pointer">
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={handleQrCodeUpload}
+                                                    className="hidden"
+                                                />
+                                                <div className="flex items-center gap-2 bg-blue-50 text-blue-600 px-6 py-3 rounded-xl font-bold hover:bg-blue-100 transition-colors">
+                                                    <Upload className="w-5 h-5" />
+                                                    {pixSettings.qr_code_url ? 'Trocar QR Code' : 'Fazer Upload do QR Code'}
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    {/* PIX Key Section */}
+                                    <div className="bg-white border border-zinc-100 rounded-3xl p-8 space-y-6">
+                                        <div className="flex items-center gap-3 pb-4 border-b border-zinc-100">
+                                            <div className="bg-secondary/10 p-3 rounded-xl">
+                                                <DollarSign className="w-6 h-6 text-secondary" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-xl font-black uppercase italic tracking-tighter text-zinc-900">Chave PIX</h3>
+                                                <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">Código que o cliente pode copiar</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <label className="text-xs font-black uppercase text-zinc-400 tracking-widest">
+                                                Digite sua chave PIX (CPF, CNPJ, Email, Telefone ou Aleatória)
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={pixSettings.pix_key}
+                                                onChange={(e) => setPixSettings({ ...pixSettings, pix_key: e.target.value })}
+                                                placeholder="Ex: 12345678900 ou email@exemplo.com"
+                                                className="w-full bg-zinc-50 border-2 border-zinc-100 rounded-xl px-4 py-4 outline-none focus:ring-2 focus:ring-primary transition-all font-mono text-lg"
+                                            />
+                                        </div>
+
+                                        <div className="flex items-center justify-between bg-zinc-50 p-4 rounded-xl">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-3 h-3 rounded-full ${pixSettings.is_active ? 'bg-green-500' : 'bg-red-500'}`} />
+                                                <span className="text-sm font-bold text-zinc-700">
+                                                    PIX está {pixSettings.is_active ? 'ATIVO' : 'DESATIVADO'} como forma de pagamento
+                                                </span>
+                                            </div>
+                                            <button
+                                                onClick={() => setPixSettings({ ...pixSettings, is_active: !pixSettings.is_active })}
+                                                className={`px-4 py-2 rounded-lg font-black text-xs uppercase tracking-wider transition-colors ${pixSettings.is_active
+                                                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                                    : 'bg-red-100 text-red-700 hover:bg-red-200'
+                                                    }`}
+                                            >
+                                                {pixSettings.is_active ? 'Desativar' : 'Ativar'}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Save Button */}
+                                    <button
+                                        onClick={updatePixSettings}
+                                        disabled={savingPix}
+                                        className={`w-full py-5 rounded-2xl font-black text-lg uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl transition-all ${savingPix
+                                            ? 'bg-zinc-400 cursor-not-allowed'
+                                            : 'bg-primary text-white hover:bg-red-900 active:scale-95 shadow-primary/20'
+                                            }`}
+                                    >
+                                        {savingPix ? (
+                                            <>
+                                                <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-white"></div>
+                                                Salvando...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Save className="w-6 h-6" />
+                                                Salvar Configurações PIX
+                                            </>
+                                        )}
+                                    </button>
+                                </>
+                            )}
+                        </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {categories.map(category => (
@@ -604,6 +799,13 @@ export default function AdminDashboard() {
                     >
                         <CheckCircle2 className="w-6 h-6" />
                         <span className="text-[10px] font-black uppercase tracking-tighter">Sabores</span>
+                    </button>
+                    <button
+                        onClick={() => setView('pix')}
+                        className={`flex flex-col items-center gap-1 p-2 transition-all ${view === 'pix' ? 'text-secondary scale-110' : 'text-zinc-500'}`}
+                    >
+                        <QrCode className="w-6 h-6" />
+                        <span className="text-[10px] font-black uppercase tracking-tighter">PIX</span>
                     </button>
                     <button
                         onClick={() => setView('categories')}

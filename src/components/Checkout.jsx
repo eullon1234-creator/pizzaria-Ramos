@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, MapPin, Phone, User, Send, Clock, Info } from 'lucide-react'
+import { X, MapPin, Phone, User, Send, Clock, Info, Copy, Check } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { supabase } from '../lib/supabase'
 
@@ -20,8 +20,32 @@ export default function Checkout({ isOpen, onClose }) {
         needChange: false,
         changeFor: ''
     })
+    const [pixSettings, setPixSettings] = useState(null)
+    const [copied, setCopied] = useState(false)
 
     const PIZZARIA_WHATSAPP = "5586994471909"
+
+    // Fetch PIX settings when modal opens
+    React.useEffect(() => {
+        if (isOpen) {
+            fetchPixSettings()
+        }
+    }, [isOpen])
+
+    async function fetchPixSettings() {
+        const { data } = await supabase.from('pix_settings').select('*').limit(1).single()
+        if (data && data.is_active) {
+            setPixSettings(data)
+        }
+    }
+
+    const copyPixKey = () => {
+        if (pixSettings?.pix_key) {
+            navigator.clipboard.writeText(pixSettings.pix_key)
+            setCopied(true)
+            setTimeout(() => setCopied(false), 2000)
+        }
+    }
 
     const checkBusinessHours = () => {
         const now = new Date()
@@ -350,6 +374,58 @@ export default function Checkout({ isOpen, onClose }) {
                                                 </div>
                                             </div>
                                         )}
+                                    </div>
+                                )}
+
+                                {/* PIX Details */}
+                                {formData.paymentMethod === 'pix' && pixSettings && (
+                                    <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 space-y-4 animate-in fade-in slide-in-from-top-2">
+                                        <div className="text-center space-y-4">
+                                            <h4 className="text-sm font-black uppercase text-blue-900 tracking-wider">Pague com PIX</h4>
+
+                                            {/* QR Code */}
+                                            {pixSettings.qr_code_url && (
+                                                <div className="bg-white p-4 rounded-2xl inline-block shadow-lg">
+                                                    <img
+                                                        src={pixSettings.qr_code_url}
+                                                        alt="QR Code PIX"
+                                                        className="w-48 h-48 object-contain mx-auto"
+                                                    />
+                                                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider mt-2">Escaneie o QR Code</p>
+                                                </div>
+                                            )}
+
+                                            {/* PIX Key */}
+                                            {pixSettings.pix_key && (
+                                                <div className="space-y-2">
+                                                    <p className="text-[10px] font-black uppercase text-blue-400 tracking-widest">Ou copie a chave PIX</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="flex-1 bg-white border border-blue-100 rounded-xl px-4 py-3 font-mono text-sm text-blue-900 font-bold break-all">
+                                                            {pixSettings.pix_key}
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={copyPixKey}
+                                                            className={`p-3 rounded-xl font-bold transition-all ${copied
+                                                                    ? 'bg-green-500 text-white'
+                                                                    : 'bg-blue-500 text-white hover:bg-blue-600'
+                                                                }`}
+                                                        >
+                                                            {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                                                        </button>
+                                                    </div>
+                                                    {copied && (
+                                                        <p className="text-xs text-green-600 font-bold animate-in fade-in">✓ Chave copiada!</p>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            <div className="bg-blue-100 p-3 rounded-xl">
+                                                <p className="text-xs text-blue-800 font-bold">
+                                                    💡 Após realizar o pagamento, envie o comprovante pelo WhatsApp
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
                             </div>
