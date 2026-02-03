@@ -11,6 +11,7 @@ export default function Checkout({ isOpen, onClose }) {
     const [orderSuccess, setOrderSuccess] = useState(false)
     const [copiedPix, setCopiedPix] = useState(false)
     const [pixSettings, setPixSettings] = useState(null)
+    const [businessHours, setBusinessHours] = useState(null)
     const [saveData, setSaveData] = useState(false)
     const [hasStoredData, setHasStoredData] = useState(false)
     const [formData, setFormData] = useState({
@@ -103,6 +104,21 @@ export default function Checkout({ isOpen, onClose }) {
         } catch (error) {
             console.error('Error fetching PIX settings:', error)
         }
+
+        // Also fetch business hours
+        try {
+            const { data } = await supabase
+                .from('store_settings')
+                .select('*')
+                .eq('key', 'business_hours')
+                .single()
+
+            if (data && data.value) {
+                setBusinessHours(data.value)
+            }
+        } catch (error) {
+            console.error('Error fetching business hours:', error)
+        }
     }
 
     const checkBusinessHours = () => {
@@ -112,15 +128,41 @@ export default function Checkout({ isOpen, onClose }) {
         const minutes = now.getMinutes()
         const currentTime = hours * 60 + minutes
 
-        // Sunday = 0, Monday = 1, ...
-        // If today is Monday, closed
-        if (day === 1) return { open: false, reason: 'Estamos fechados hoje (Segunda-feira).' }
+        // If no business hours configured, use default
+        if (!businessHours || !businessHours[day]) {
+            // Default: Monday closed, others 18:00-23:30
+            if (day === 1) return { open: false, reason: 'Estamos fechados hoje (Segunda-feira).' }
 
-        const openTime = 18 * 60
-        const closeTime = 23 * 60 + 30
+            const openTime = 18 * 60
+            const closeTime = 23 * 60 + 30
+
+            if (currentTime < openTime || currentTime > closeTime) {
+                return { open: false, reason: 'Nosso horário de funcionamento é das 18:00 às 23:30.' }
+            }
+
+            return { open: true }
+        }
+
+        const daySchedule = businessHours[day]
+
+        // Check if the day is marked as closed
+        if (!daySchedule.open) {
+            const dayNames = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
+            return { open: false, reason: `Estamos fechados hoje (${dayNames[day]}).` }
+        }
+
+        // Parse open and close times
+        const [openHour, openMin] = daySchedule.openTime.split(':').map(Number)
+        const [closeHour, closeMin] = daySchedule.closeTime.split(':').map(Number)
+
+        const openTime = openHour * 60 + openMin
+        const closeTime = closeHour * 60 + closeMin
 
         if (currentTime < openTime || currentTime > closeTime) {
-            return { open: false, reason: 'Nosso horário de funcionamento é das 18:00 às 23:30.' }
+            return {
+                open: false,
+                reason: `Nosso horário de funcionamento hoje é das ${daySchedule.openTime} às ${daySchedule.closeTime}.`
+            }
         }
 
         return { open: true }

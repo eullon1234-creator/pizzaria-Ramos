@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import ProductModal from '../components/ProductModal'
 import CategoryModal from '../components/CategoryModal'
 import PixSettingsModal from '../components/PixSettingsModal'
+import BusinessHoursModal from '../components/BusinessHoursModal'
 
 export default function AdminDashboard() {
     const [view, setView] = useState('orders') // default to orders
@@ -15,6 +16,7 @@ export default function AdminDashboard() {
     const [modalOpen, setModalOpen] = useState(false)
     const [categoryModalOpen, setCategoryModalOpen] = useState(false)
     const [pixModalOpen, setPixModalOpen] = useState(false)
+    const [businessHoursModalOpen, setBusinessHoursModalOpen] = useState(false)
     const [editingProduct, setEditingProduct] = useState(null)
     const [editingCategory, setEditingCategory] = useState(null)
     const [flavors, setFlavors] = useState([])
@@ -300,6 +302,12 @@ export default function AdminDashboard() {
                                     className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-1 hover:underline"
                                 >
                                     <span className="text-lg">💠</span> Configurar PIX
+                                </button>
+                                <button
+                                    onClick={() => setBusinessHoursModalOpen(true)}
+                                    className="text-[10px] font-black uppercase tracking-widest text-green-600 flex items-center gap-1 hover:underline"
+                                >
+                                    <Clock className="w-4 h-4" /> Horários
                                 </button>
                             </div>
                         )}
@@ -662,6 +670,11 @@ export default function AdminDashboard() {
                 <PixSettingsModal
                     isOpen={pixModalOpen}
                     onClose={() => setPixModalOpen(false)}
+                />
+
+                <BusinessHoursModal
+                    isOpen={businessHoursModalOpen}
+                    onClose={() => setBusinessHoursModalOpen(false)}
                 />
             </main>
         </div>
