@@ -324,9 +324,9 @@ export default function AdminDashboard() {
         const cleanPhone = phone.replace(/\D/g, '')
 
         if (type === 'saida') {
-            message = `Olá ${name}! Seu pedido da Ramos Pizza acabou de sair para entrega! 🛵💨`
+            message = `Segura o coração (e a fome), ${name}! 🍕 Sua *Pizzaria Ramos* favorita já está no asfalto. O entregador tá inspirado e o cheirinho tá de matar! Prepara a mesa que a nave tá chegando! 🛵💨🔥`
         } else if (type === 'pronto') {
-            message = `Olá ${name}! Seu pedido já está pronto e aguardando para ser entregue/retirado! 🍕✅`
+            message = `Aviso importante, ${name}! 🚨 Sua pizza na *Pizzaria Ramos* acaba de sair do forno e está mais bonita que boleto pago! Já está prontinha te esperando. Vem logo antes que a gente morda um pedaço! 🍕😋✨`
         }
 
         const url = `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`
