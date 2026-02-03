@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
-import { Plus, Edit, Trash2, Power, Pizza, LayoutDashboard, LogOut, ChevronRight, Clock, MapPin, User, CheckCircle2, Package, Truck, XCircle, Bell, QrCode, DollarSign, Save, Upload, TrendingUp, Search, MessageCircle, Filter } from 'lucide-react'
+import { Plus, Edit, Trash2, Power, Pizza, LayoutDashboard, LogOut, ChevronRight, Clock, MapPin, User, CircleCheck, Package, Truck, CircleX, Bell, QrCode, DollarSign, Save, Upload, TrendingUp, Search, MessageCircle, Filter } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import ProductModal from '../components/ProductModal'
 import CategoryModal from '../components/CategoryModal'
@@ -186,11 +186,12 @@ export default function AdminDashboard() {
 
             if (uploadError) throw uploadError
 
-            const { data: { publicUrl } } = supabase.storage
-                .from('images')
-                .getPublicUrl(filePath)
+            const { data } = supabase.storage.from('images').getPublicUrl(filePath)
+            const publicUrl = data?.publicUrl
 
-            setPixSettings({ ...pixSettings, qr_code_url: publicUrl })
+            if (publicUrl) {
+                setPixSettings({ ...pixSettings, qr_code_url: publicUrl })
+            }
         } catch (error) {
             console.error('Error uploading QR Code:', error)
             alert('Erro ao fazer upload do QR Code')
@@ -532,16 +533,6 @@ export default function AdminDashboard() {
                                             key={order.id}
                                             className={`bg-white rounded-3xl overflow-hidden shadow-md border-2 transition-all hover:shadow-xl ${order.status === 'pendente' ? 'border-primary ring-4 ring-primary/5 animate-pulse-subtle' : 'border-zinc-100'}`}
                                         >
-                                            <style dangerouslySetInnerHTML={{
-                                                __html: `
-                                            @keyframes pulse-subtle {
-                                                0%, 100% { opacity: 1; transform: scale(1); }
-                                                50% { opacity: 0.98; transform: scale(0.995); }
-                                            }
-                                            .animate-pulse-subtle {
-                                                animation: pulse-subtle 2s infinite ease-in-out;
-                                            }
-                                        ` }} />
                                             <div className={`px-6 py-4 flex justify-between items-center border-b ${getStatusStyles(order.status)}`}>
                                                 <div className="flex items-center gap-4">
                                                     <div className="flex items-center gap-2">
@@ -666,7 +657,7 @@ export default function AdminDashboard() {
                                                         onClick={() => updateOrderStatus(order.id, 'preparando', order)}
                                                         className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1 ${order.status === 'preparando' ? 'border-blue-500 bg-blue-50 text-blue-600' : 'border-zinc-50 bg-zinc-50 text-zinc-400 hover:border-zinc-200'}`}
                                                     >
-                                                        <CheckCircle2 className="w-5 h-5" />
+                                                        <CircleCheck className="w-5 h-5" />
                                                         <span className="text-[10px] font-black uppercase tracking-tighter">Preparo</span>
                                                     </button>
                                                     <button
@@ -680,14 +671,14 @@ export default function AdminDashboard() {
                                                         onClick={() => updateOrderStatus(order.id, 'entregue', order)}
                                                         className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1 ${order.status === 'entregue' ? 'border-green-500 bg-green-50 text-green-600' : 'border-zinc-50 bg-zinc-50 text-zinc-400 hover:border-zinc-200'}`}
                                                     >
-                                                        <CheckCircle2 className="w-5 h-5" />
+                                                        <CircleCheck className="w-5 h-5" />
                                                         <span className="text-[10px] font-black uppercase tracking-tighter">Finalizar</span>
                                                     </button>
                                                     <button
                                                         onClick={() => updateOrderStatus(order.id, 'cancelado', order)}
                                                         className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1 ${order.status === 'cancelado' ? 'border-red-500 bg-red-50 text-red-600' : 'border-zinc-50 bg-zinc-50 text-zinc-400 hover:border-zinc-200'}`}
                                                     >
-                                                        <XCircle className="w-5 h-5" />
+                                                        <CircleX className="w-5 h-5" />
                                                         <span className="text-[10px] font-black uppercase tracking-tighter">Cancelar</span>
                                                     </button>
                                                 </div>
