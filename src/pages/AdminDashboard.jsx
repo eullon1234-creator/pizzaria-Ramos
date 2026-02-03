@@ -4,6 +4,8 @@ import { Plus, Edit, Trash2, Power, Pizza, LayoutDashboard, LogOut, ChevronRight
 import { useNavigate } from 'react-router-dom'
 import ProductModal from '../components/ProductModal'
 import CategoryModal from '../components/CategoryModal'
+import PixSettingsModal from '../components/PixSettingsModal'
+import BusinessHoursModal from '../components/BusinessHoursModal'
 
 export default function AdminDashboard() {
     const [view, setView] = useState('orders') // default to orders
@@ -13,6 +15,8 @@ export default function AdminDashboard() {
     const [loading, setLoading] = useState(true)
     const [modalOpen, setModalOpen] = useState(false)
     const [categoryModalOpen, setCategoryModalOpen] = useState(false)
+    const [pixModalOpen, setPixModalOpen] = useState(false)
+    const [businessHoursModalOpen, setBusinessHoursModalOpen] = useState(false)
     const [editingProduct, setEditingProduct] = useState(null)
     const [editingCategory, setEditingCategory] = useState(null)
     const [flavors, setFlavors] = useState([])
@@ -121,7 +125,13 @@ export default function AdminDashboard() {
             // Create default if doesn't exist
             const { data: newData } = await supabase
                 .from('pix_settings')
-                .insert({ pix_key: '', is_active: true })
+                .insert({
+                    pix_key: '',
+                    is_active: true,
+                    holder_name: '',
+                    bank_name: '',
+                    key_type: 'cpf'
+                })
                 .select()
                 .single()
             setPixSettings(newData)
@@ -136,7 +146,10 @@ export default function AdminDashboard() {
             .update({
                 pix_key: pixSettings.pix_key,
                 qr_code_url: pixSettings.qr_code_url,
-                is_active: pixSettings.is_active
+                is_active: pixSettings.is_active,
+                holder_name: pixSettings.holder_name,
+                bank_name: pixSettings.bank_name,
+                key_type: pixSettings.key_type
             })
             .eq('id', pixSettings.id)
 
@@ -281,8 +294,6 @@ export default function AdminDashboard() {
         </div>
     )
 
-    // ... existing modal logic ...
-
     return (
         <div className="min-h-screen bg-zinc-50 flex">
             {/* Sidebar (Desktop) */}
@@ -357,12 +368,20 @@ export default function AdminDashboard() {
                             {view === 'orders' ? 'Monitor de Pedidos' : view === 'products' ? 'Gestão do Cardápio' : view === 'flavors' ? 'Sabores de Bebidas' : view === 'pix' ? 'Configurações PIX' : 'Gestão de Categorias'}
                         </h2>
                         {view === 'orders' && (
-                            <div className="flex items-center gap-2 mt-1">
-                                <span className="flex h-2 w-2 relative">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                                </span>
-                                <span className="text-[10px] font-black uppercase tracking-widest text-green-600">Recebendo pedidos em tempo real</span>
+                            <div className="flex items-center gap-4 mt-1">
+                                <div className="flex items-center gap-2">
+                                    <span className="flex h-2 w-2 relative">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                    </span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-green-600">Recebendo pedidos em tempo real</span>
+                                </div>
+                                <button
+                                    onClick={() => setBusinessHoursModalOpen(true)}
+                                    className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-1 hover:underline"
+                                >
+                                    <Clock className="w-4 h-4" /> Horários de Funcionamento
+                                </button>
                             </div>
                         )}
                     </div>
@@ -393,7 +412,6 @@ export default function AdminDashboard() {
                                         key={order.id}
                                         className={`bg-white rounded-3xl overflow-hidden shadow-md border-2 transition-all hover:shadow-xl ${order.status === 'pendente' ? 'border-primary ring-4 ring-primary/5' : 'border-zinc-100'}`}
                                     >
-                                        {/* Status Header */}
                                         <div className={`px-6 py-4 flex justify-between items-center border-b ${getStatusStyles(order.status)}`}>
                                             <div className="flex items-center gap-2">
                                                 <Clock className="w-4 h-4" />
@@ -403,7 +421,6 @@ export default function AdminDashboard() {
                                         </div>
 
                                         <div className="p-6 space-y-6">
-                                            {/* Client & Info */}
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div className="space-y-1">
                                                     <div className="flex items-center gap-1 text-zinc-400">
@@ -425,10 +442,20 @@ export default function AdminDashboard() {
                                                     {order.delivery_address.reference && (
                                                         <p className="text-[10px] text-zinc-400 italic font-medium">Ref: {order.delivery_address.reference}</p>
                                                     )}
+                                                    {order.delivery_address.location_link && (
+                                                        <a
+                                                            href={order.delivery_address.location_link}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex items-center gap-1 text-[10px] text-blue-600 font-bold uppercase mt-1 hover:underline"
+                                                        >
+                                                            <MapPin className="w-3 h-3" />
+                                                            Ver no Mapa
+                                                        </a>
+                                                    )}
                                                 </div>
                                             </div>
 
-                                            {/* Items */}
                                             <div className="bg-zinc-50 rounded-2xl p-4 space-y-3">
                                                 <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 border-b border-zinc-100 pb-2 flex justify-between">
                                                     Itens do Pedido
@@ -474,7 +501,6 @@ export default function AdminDashboard() {
                                                 </div>
                                             </div>
 
-                                            {/* Action Buttons */}
                                             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                                                 <button
                                                     onClick={() => updateOrderStatus(order.id, 'preparando')}
@@ -639,7 +665,7 @@ export default function AdminDashboard() {
                                                     />
                                                     <button
                                                         onClick={() => setPixSettings({ ...pixSettings, qr_code_url: '' })}
-                                                        className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
                                                     >
                                                         <Trash2 className="w-4 h-4" />
                                                     </button>
@@ -660,7 +686,7 @@ export default function AdminDashboard() {
                                                     onChange={handleQrCodeUpload}
                                                     className="hidden"
                                                 />
-                                                <div className="flex items-center gap-2 bg-blue-50 text-blue-600 px-6 py-3 rounded-xl font-bold hover:bg-blue-100 transition-colors">
+                                                <div className="flex items-center gap-2 bg-blue-50 text-blue-600 px-6 py-3 rounded-xl font-bold hover:bg-blue-100 transition-colors shadow-sm">
                                                     <Upload className="w-5 h-5" />
                                                     {pixSettings.qr_code_url ? 'Trocar QR Code' : 'Fazer Upload do QR Code'}
                                                 </div>
@@ -668,36 +694,70 @@ export default function AdminDashboard() {
                                         </div>
                                     </div>
 
-                                    {/* PIX Key Section */}
+                                    {/* PIX Details Section */}
                                     <div className="bg-white border border-zinc-100 rounded-3xl p-8 space-y-6">
                                         <div className="flex items-center gap-3 pb-4 border-b border-zinc-100">
                                             <div className="bg-secondary/10 p-3 rounded-xl">
                                                 <DollarSign className="w-6 h-6 text-secondary" />
                                             </div>
                                             <div>
-                                                <h3 className="text-xl font-black uppercase italic tracking-tighter text-zinc-900">Chave PIX</h3>
-                                                <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">Código que o cliente pode copiar</p>
+                                                <h3 className="text-xl font-black uppercase italic tracking-tighter text-zinc-900">Detalhes do PIX</h3>
+                                                <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">Informações para transferência</p>
                                             </div>
                                         </div>
 
-                                        <div className="space-y-3">
-                                            <label className="text-xs font-black uppercase text-zinc-400 tracking-widest">
-                                                Digite sua chave PIX (CPF, CNPJ, Email, Telefone ou Aleatória)
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={pixSettings.pix_key}
-                                                onChange={(e) => setPixSettings({ ...pixSettings, pix_key: e.target.value })}
-                                                placeholder="Ex: 12345678900 ou email@exemplo.com"
-                                                className="w-full bg-zinc-50 border-2 border-zinc-100 rounded-xl px-4 py-4 outline-none focus:ring-2 focus:ring-primary transition-all font-mono text-lg"
-                                            />
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest ml-1">Tipo de Chave</label>
+                                                <select
+                                                    value={pixSettings.key_type}
+                                                    onChange={(e) => setPixSettings({ ...pixSettings, key_type: e.target.value })}
+                                                    className="w-full bg-zinc-50 border-2 border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary transition-all font-bold text-zinc-700"
+                                                >
+                                                    <option value="cpf">CPF</option>
+                                                    <option value="cnpj">CNPJ</option>
+                                                    <option value="email">E-mail</option>
+                                                    <option value="phone">Telefone</option>
+                                                    <option value="random">Chave Aleatória</option>
+                                                </select>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest ml-1">Chave PIX</label>
+                                                <input
+                                                    type="text"
+                                                    value={pixSettings.pix_key}
+                                                    onChange={(e) => setPixSettings({ ...pixSettings, pix_key: e.target.value })}
+                                                    placeholder="Sua chave..."
+                                                    className="w-full bg-zinc-50 border-2 border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary transition-all font-bold text-zinc-700"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest ml-1">Nome do Titular</label>
+                                                <input
+                                                    type="text"
+                                                    value={pixSettings.holder_name}
+                                                    onChange={(e) => setPixSettings({ ...pixSettings, holder_name: e.target.value })}
+                                                    placeholder="Nome completo..."
+                                                    className="w-full bg-zinc-50 border-2 border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary transition-all font-bold text-zinc-700"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest ml-1">Banco</label>
+                                                <input
+                                                    type="text"
+                                                    value={pixSettings.bank_name}
+                                                    onChange={(e) => setPixSettings({ ...pixSettings, bank_name: e.target.value })}
+                                                    placeholder="Ex: Nubank, Inter..."
+                                                    className="w-full bg-zinc-50 border-2 border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary transition-all font-bold text-zinc-700"
+                                                />
+                                            </div>
                                         </div>
 
                                         <div className="flex items-center justify-between bg-zinc-50 p-4 rounded-xl">
                                             <div className="flex items-center gap-3">
                                                 <div className={`w-3 h-3 rounded-full ${pixSettings.is_active ? 'bg-green-500' : 'bg-red-500'}`} />
                                                 <span className="text-sm font-bold text-zinc-700">
-                                                    PIX está {pixSettings.is_active ? 'ATIVO' : 'DESATIVADO'} como forma de pagamento
+                                                    PIX está {pixSettings.is_active ? 'ATIVO' : 'DESATIVADO'} no checkout
                                                 </span>
                                             </div>
                                             <button
@@ -837,6 +897,22 @@ export default function AdminDashboard() {
                         category={editingCategory}
                         onClose={() => setCategoryModalOpen(false)}
                         onSave={fetchData}
+                    />
+                )}
+
+                {/* redundant - removing pix modal usage for now as we have full page view 
+                {pixModalOpen && (
+                    <PixSettingsModal
+                        isOpen={pixModalOpen}
+                        onClose={() => setPixModalOpen(false)}
+                    />
+                )}
+                */}
+
+                {businessHoursModalOpen && (
+                    <BusinessHoursModal
+                        isOpen={businessHoursModalOpen}
+                        onClose={() => setBusinessHoursModalOpen(false)}
                     />
                 )}
             </main>

@@ -6,6 +6,8 @@ import SizePicker from './SizePicker'
 import HalfAndHalfModal from './HalfAndHalfModal'
 import { useCart } from '../context/CartContext'
 
+import MenuSkeleton from './MenuSkeleton'
+
 export default function Menu() {
     const [categories, setCategories] = useState([])
     const [products, setProducts] = useState([])
@@ -40,7 +42,17 @@ export default function Menu() {
                 .eq('is_active', true)
 
             if (prodErr) throw prodErr
-            setProducts(prods)
+
+            // Optimize image URLs
+            const optimizedProds = prods.map(p => {
+                if (p.image_url) {
+                    // Assuming the URL doesn't already have query params.
+                    // A more robust solution would check for existing '?'
+                    p.image_url = `${p.image_url}?width=400&quality=75`
+                }
+                return p
+            })
+            setProducts(optimizedProds)
         } catch (error) {
             console.error('Error fetching menu details:', error.message || error)
         } finally {
@@ -63,11 +75,7 @@ export default function Menu() {
     const filteredProducts = products.filter(p => p.category_id === activeCategory)
     const isPizzaCategory = categories.find(c => c.id === activeCategory)?.name.toLowerCase().includes('pizza')
 
-    if (loading) return (
-        <div className="flex justify-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-primary"></div>
-        </div>
-    )
+    if (loading) return <MenuSkeleton />
 
     return (
         <section className="py-12 bg-white" id="menu">
@@ -128,7 +136,14 @@ export default function Menu() {
                             <div key={product.id} className="group bg-white rounded-2xl overflow-hidden shadow-md border border-zinc-100 hover:shadow-xl transition-all hover:-translate-y-1">
                                 <div className="relative h-48 overflow-hidden bg-zinc-100">
                                     {product.image_url ? (
-                                        <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                        <img 
+                                            src={product.image_url} 
+                                            alt={product.name} 
+                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                                            loading="lazy"
+                                            width="256"
+                                            height="192"
+                                        />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center text-zinc-300">
                                             <Pizza className="w-12 h-12" />

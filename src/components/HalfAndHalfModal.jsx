@@ -82,6 +82,9 @@ export default function HalfAndHalfModal({ isOpen, onClose, products }) {
                     animate={{ scale: 1, opacity: 1, y: 0 }}
                     exit={{ scale: 0.9, opacity: 0, y: 20 }}
                     className="relative bg-white w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="h2h-title"
                 >
                     {/* Header */}
                     <div className="p-6 bg-primary text-white flex justify-between items-center">
@@ -90,19 +93,26 @@ export default function HalfAndHalfModal({ isOpen, onClose, products }) {
                                 <Pizza className="w-6 h-6 text-white" />
                             </div>
                             <div>
-                                <h2 className="text-xl font-black uppercase italic tracking-tighter">Montar Meio a Meio</h2>
+                                <h2 id="h2h-title" className="text-xl font-black uppercase italic tracking-tighter">Montar Meio a Meio</h2>
                                 <p className="text-[10px] text-secondary font-black uppercase tracking-[0.2em] mt-0.5">
                                     Passo {step} de 3: {step === 1 ? 'Tamanho' : step === 2 ? 'Primeiro Sabor' : 'Segundo Sabor'}
                                 </p>
                             </div>
                         </div>
-                        <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                        <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors" aria-label="Fechar seletor de pizza meio a meio">
                             <X className="w-6 h-6 text-white" />
                         </button>
                     </div>
 
                     {/* Progress Bar */}
-                    <div className="h-1.5 w-full bg-zinc-100 flex">
+                    <div
+                        className="h-1.5 w-full bg-zinc-100 flex"
+                        role="progressbar"
+                        aria-valuenow={step}
+                        aria-valuemin="1"
+                        aria-valuemax="3"
+                        aria-label={`Progresso: Passo ${step} de 3`}
+                    >
                         <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: `${(step / 3) * 100}%` }}
@@ -191,6 +201,7 @@ export default function HalfAndHalfModal({ isOpen, onClose, products }) {
                             <button
                                 onClick={handleBack}
                                 className="flex items-center gap-2 text-zinc-500 font-black uppercase text-xs tracking-widest hover:text-primary transition-colors"
+                                aria-label="Voltar para o passo anterior"
                             >
                                 <ChevronLeft className="w-4 h-4" />
                                 Voltar
@@ -216,6 +227,7 @@ export default function HalfAndHalfModal({ isOpen, onClose, products }) {
                                 <button
                                     onClick={handleNext}
                                     className="flex items-center gap-2 text-primary font-black uppercase text-xs tracking-widest transition-transform hover:translate-x-1"
+                                    aria-label="Pular para o próximo passo"
                                 >
                                     Pular
                                     <ChevronRight className="w-4 h-4" />
