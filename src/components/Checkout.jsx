@@ -28,14 +28,75 @@ export default function Checkout({ isOpen, onClose }) {
         needChange: false,
         changeFor: ''
     })
+    const [errors, setErrors] = useState({})
 
     const PIZZARIA_WHATSAPP = "5586994471909"
     const STORAGE_KEY = 'pizzaria_ramos_customer_data'
+
+    // Validation logic
+    const validateField = (name, value) => {
+        let error = ''
+        switch (name) {
+            case 'nome':
+                if (!value) error = 'O nome é obrigatório.'
+                break
+            case 'whatsapp':
+                if (!value) error = 'O WhatsApp é obrigatório.'
+                else if (!/^\d{10,11}$/.test(value.replace(/\D/g, ''))) error = 'Número de WhatsApp inválido.'
+                break
+            case 'endereco':
+                if (!value) error = 'O endereço é obrigatório.'
+                break
+            case 'numero':
+                if (!value) error = 'O número é obrigatório.'
+                break
+            case 'bairro':
+                if (!value) error = 'O bairro é obrigatório.'
+                break
+            case 'horarioAgendado':
+                if (formData.tipoEntrega === 'agendada' && !value) {
+                    error = 'A hora do agendamento é obrigatória.'
+                }
+                break
+            case 'changeFor':
+                if (formData.needChange && (!value || parseFloat(value) <= cartTotal)) {
+                    error = `O valor deve ser maior que o total (R$ ${cartTotal.toFixed(2)}).`
+                }
+                break
+            default:
+                break
+        }
+        return error
+    }
+
+    const validateForm = () => {
+        const newErrors = {}
+        Object.keys(formData).forEach(key => {
+            const error = validateField(key, formData[key])
+            if (error) {
+                newErrors[key] = error
+            }
+        })
+        setErrors(newErrors)
+        return Object.keys(newErrors).length === 0
+    }
+
+    const handleChange = (e) => {
+        const { name, value, type, checked } = e.target
+        const fieldValue = type === 'checkbox' ? checked : value
+
+        setFormData(prev => ({ ...prev, [name]: fieldValue }))
+
+        const error = validateField(name, fieldValue)
+        setErrors(prev => ({ ...prev, [name]: error }))
+    }
+
 
     useEffect(() => {
         if (isOpen) {
             fetchPixSettings()
             loadSavedData()
+            setErrors({}) // Clear errors when opening
         } else {
             // Reset states when modal re-opens
             setOrderSuccess(false)
@@ -284,6 +345,10 @@ export default function Checkout({ isOpen, onClose }) {
     const handleSendOrder = async (e) => {
         e.preventDefault()
 
+        if (!validateForm()) {
+            return
+        }
+
         // Ask user if they want to save their data (only if not already saved and checkbox is checked)
         if (saveData && !hasStoredData) {
             const confirmSave = window.confirm(
@@ -425,13 +490,16 @@ export default function Checkout({ isOpen, onClose }) {
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{ scale: 0.9, opacity: 0, y: 20 }}
                         className="relative bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="checkout-title"
                     >
                         {orderSuccess ? (
                             <div className="p-8 flex flex-col items-center justify-center text-center h-full space-y-6">
                                 <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-2">
                                     <Check className="w-10 h-10" />
                                 </div>
-                                <h2 className="text-2xl font-black uppercase italic tracking-tighter text-zinc-800">Pedido Enviado!</h2>
+                                <h2 id="checkout-title-success" className="text-2xl font-black uppercase italic tracking-tighter text-zinc-800">Pedido Enviado!</h2>
                                 <p className="text-zinc-500 font-medium">Seu pedido foi registrado e enviado para nosso WhatsApp.</p>
 
                                 {/* Tempo de Entrega */}
@@ -472,6 +540,7 @@ export default function Checkout({ isOpen, onClose }) {
                                                             onClick={handleCopyPix}
                                                             className="p-2 hover:bg-zinc-100 rounded-lg transition-colors text-zinc-600 active:scale-95"
                                                             title="Copiar chave"
+                                                            aria-label="Copiar chave PIX"
                                                         >
                                                             {copiedPix ? <Check className="w-5 h-5 text-green-500" /> : <Copy className="w-5 h-5" />}
                                                         </button>
@@ -517,10 +586,10 @@ export default function Checkout({ isOpen, onClose }) {
                                 {/* Header */}
                                 <div className="p-6 bg-primary text-white flex justify-between items-center">
                                     <div>
-                                        <h2 className="text-xl font-black uppercase italic tracking-tighter">Finalizar Pedido</h2>
+                                        <h2 id="checkout-title" className="text-xl font-black uppercase italic tracking-tighter">Finalizar Pedido</h2>
                                         <p className="text-xs text-secondary font-bold uppercase tracking-widest mt-1">Quase lá! Só precisamos do endereço.</p>
                                     </div>
-                                    <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                                    <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors" aria-label="Fechar checkout">
                                         <X className="w-6 h-6" />
                                     </button>
                                 </div>
@@ -539,22 +608,26 @@ export default function Checkout({ isOpen, onClose }) {
                                                 <input
                                                     required
                                                     type="text"
+                                                    name="nome"
                                                     value={formData.nome}
-                                                    onChange={e => setFormData({ ...formData, nome: e.target.value })}
-                                                    className="w-full bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary transition-all font-medium"
+                                                    onChange={handleChange}
+                                                    className={`w-full bg-zinc-50 border rounded-xl px-4 py-3 outline-none focus:ring-2 transition-all font-medium ${errors.nome ? 'border-red-500 focus:ring-red-500' : 'border-zinc-100 focus:ring-primary'}`}
                                                     placeholder="Como podemos te chamar?"
                                                 />
+                                                {errors.nome && <p className="text-xs text-red-500 mt-1 ml-1 font-bold">{errors.nome}</p>}
                                             </div>
                                             <div className="space-y-1">
                                                 <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest ml-1">WhatsApp</label>
                                                 <input
                                                     required
                                                     type="tel"
+                                                    name="whatsapp"
                                                     value={formData.whatsapp}
-                                                    onChange={e => setFormData({ ...formData, whatsapp: e.target.value })}
-                                                    className="w-full bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary transition-all font-medium"
+                                                    onChange={handleChange}
+                                                    className={`w-full bg-zinc-50 border rounded-xl px-4 py-3 outline-none focus:ring-2 transition-all font-medium ${errors.whatsapp ? 'border-red-500 focus:ring-red-500' : 'border-zinc-100 focus:ring-primary'}`}
                                                     placeholder="(86) 9...."
                                                 />
+                                                {errors.whatsapp && <p className="text-xs text-red-500 mt-1 ml-1 font-bold">{errors.whatsapp}</p>}
                                             </div>
                                         </div>
 
@@ -614,22 +687,26 @@ export default function Checkout({ isOpen, onClose }) {
                                                     <input
                                                         required
                                                         type="text"
+                                                        name="endereco"
                                                         value={formData.endereco}
-                                                        onChange={e => setFormData({ ...formData, endereco: e.target.value })}
-                                                        className="w-full bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary transition-all font-medium"
+                                                        onChange={handleChange}
+                                                        className={`w-full bg-zinc-50 border rounded-xl px-4 py-3 outline-none focus:ring-2 transition-all font-medium ${errors.endereco ? 'border-red-500 focus:ring-red-500' : 'border-zinc-100 focus:ring-primary'}`}
                                                         placeholder="Nome da rua"
                                                     />
+                                                    {errors.endereco && <p className="text-xs text-red-500 mt-1 ml-1 font-bold">{errors.endereco}</p>}
                                                 </div>
                                                 <div className="col-span-1 space-y-1">
                                                     <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest ml-1">Nº</label>
                                                     <input
                                                         required
                                                         type="text"
+                                                        name="numero"
                                                         value={formData.numero}
-                                                        onChange={e => setFormData({ ...formData, numero: e.target.value })}
-                                                        className="w-full bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary transition-all font-medium"
+                                                        onChange={handleChange}
+                                                        className={`w-full bg-zinc-50 border rounded-xl px-4 py-3 outline-none focus:ring-2 transition-all font-medium ${errors.numero ? 'border-red-500 focus:ring-red-500' : 'border-zinc-100 focus:ring-primary'}`}
                                                         placeholder="123"
                                                     />
+                                                    {errors.numero && <p className="text-xs text-red-500 mt-1 ml-1 font-bold">{errors.numero}</p>}
                                                 </div>
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -638,18 +715,21 @@ export default function Checkout({ isOpen, onClose }) {
                                                     <input
                                                         required
                                                         type="text"
+                                                        name="bairro"
                                                         value={formData.bairro}
-                                                        onChange={e => setFormData({ ...formData, bairro: e.target.value })}
-                                                        className="w-full bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary transition-all font-medium"
+                                                        onChange={handleChange}
+                                                        className={`w-full bg-zinc-50 border rounded-xl px-4 py-3 outline-none focus:ring-2 transition-all font-medium ${errors.bairro ? 'border-red-500 focus:ring-red-500' : 'border-zinc-100 focus:ring-primary'}`}
                                                         placeholder="Ex: Centro"
                                                     />
+                                                    {errors.bairro && <p className="text-xs text-red-500 mt-1 ml-1 font-bold">{errors.bairro}</p>}
                                                 </div>
                                                 <div className="space-y-1">
                                                     <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest ml-1">Referência (Opcional)</label>
                                                     <input
                                                         type="text"
+                                                        name="pontoReferencia"
                                                         value={formData.pontoReferencia}
-                                                        onChange={e => setFormData({ ...formData, pontoReferencia: e.target.value })}
+                                                        onChange={handleChange}
                                                         className="w-full bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary transition-all font-medium"
                                                         placeholder="Perto de onde?"
                                                     />
@@ -736,12 +816,14 @@ export default function Checkout({ isOpen, onClose }) {
                                                             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-500 font-bold">R$</span>
                                                             <input
                                                                 type="number"
+                                                                name="changeFor"
                                                                 value={formData.changeFor}
-                                                                onChange={e => setFormData({ ...formData, changeFor: e.target.value })}
-                                                                className="w-full bg-white border border-orange-100 rounded-xl pl-10 pr-4 py-2 outline-none focus:ring-2 focus:ring-orange-200 text-orange-900 font-bold"
+                                                                onChange={handleChange}
+                                                                className={`w-full bg-white border rounded-xl pl-10 pr-4 py-2 outline-none focus:ring-2 text-orange-900 font-bold ${errors.changeFor ? 'border-red-500 focus:ring-red-500' : 'border-orange-100 focus:ring-orange-200'}`}
                                                                 placeholder="0.00"
                                                             />
                                                         </div>
+                                                        {errors.changeFor && <p className="text-xs text-red-500 mt-1 ml-1 font-bold">{errors.changeFor}</p>}
                                                     </div>
                                                 )}
                                             </div>
@@ -778,11 +860,13 @@ export default function Checkout({ isOpen, onClose }) {
                                                 <span className="block font-black text-xs uppercase tracking-tighter">Agendar</span>
                                                 <input
                                                     type="time"
+                                                    name="horarioAgendado"
                                                     disabled={formData.tipoEntrega !== 'agendada'}
                                                     value={formData.horarioAgendado}
-                                                    onChange={e => setFormData({ ...formData, horarioAgendado: e.target.value })}
+                                                    onChange={handleChange}
                                                     className="mt-1 bg-transparent w-full text-xs font-bold focus:outline-none"
                                                 />
+                                                {errors.horarioAgendado && <p className="text-xs text-red-500 mt-1 font-bold">{errors.horarioAgendado}</p>}
                                             </label>
                                         </div>
                                     </div>
