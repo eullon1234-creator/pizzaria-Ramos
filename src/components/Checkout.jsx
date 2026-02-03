@@ -245,6 +245,7 @@ export default function Checkout({ isOpen, onClose }) {
     }
 
     const handleFinish = () => {
+        setOrderSuccess(false)
         clearCart()
         onClose()
     }
@@ -402,43 +403,56 @@ export default function Checkout({ isOpen, onClose }) {
                                 <h2 className="text-2xl font-black uppercase italic tracking-tighter text-zinc-800">Pedido Enviado!</h2>
                                 <p className="text-zinc-500 font-medium">Seu pedido foi registrado e enviado para nosso WhatsApp.</p>
 
-                                {formData.paymentMethod === 'pix' && pixSettings && (
+                                {formData.paymentMethod === 'pix' && (
                                     <div className="w-full bg-zinc-50 border-2 border-dashed border-zinc-200 rounded-2xl p-6 space-y-4">
                                         <div className="flex items-center justify-center gap-2 text-primary font-black uppercase tracking-wider text-sm">
                                             <CreditCard className="w-5 h-5" />
                                             <span>Pagamento via PIX</span>
                                         </div>
 
-                                        <div className="space-y-1">
-                                            <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Banco</p>
-                                            <p className="font-bold text-zinc-800">{pixSettings.bank_name}</p>
-                                        </div>
-
-                                        <div className="space-y-1">
-                                            <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Titular</p>
-                                            <p className="font-bold text-zinc-800">{pixSettings.holder_name}</p>
-                                        </div>
-
-                                        <div className="pt-2">
-                                            <div className="flex items-center gap-2 bg-white border border-zinc-200 p-3 rounded-xl">
-                                                <div className="flex-1 overflow-hidden">
-                                                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-0.5">Chave PIX ({pixSettings.key_type})</p>
-                                                    <p className="font-mono text-sm font-bold text-zinc-800 truncate">{pixSettings.pix_key}</p>
+                                        {pixSettings ? (
+                                            <>
+                                                <div className="space-y-1">
+                                                    <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Banco</p>
+                                                    <p className="font-bold text-zinc-800">{pixSettings.bank_name}</p>
                                                 </div>
-                                                <button
-                                                    onClick={handleCopyPix}
-                                                    className="p-2 hover:bg-zinc-100 rounded-lg transition-colors text-zinc-600 active:scale-95"
-                                                    title="Copiar chave"
-                                                >
-                                                    {copiedPix ? <Check className="w-5 h-5 text-green-500" /> : <Copy className="w-5 h-5" />}
-                                                </button>
-                                            </div>
-                                            {copiedPix && <span className="text-[10px] font-bold text-green-600 mt-1 block">Chave copiada!</span>}
-                                        </div>
 
-                                        <div className="bg-primary/10 text-primary p-3 rounded-xl text-xs font-bold leading-relaxed">
-                                            ⚠️ Importante: Envie o comprovante no WhatsApp que abriu para confirmarmos seu pedido mais rápido!
-                                        </div>
+                                                <div className="space-y-1">
+                                                    <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Titular</p>
+                                                    <p className="font-bold text-zinc-800">{pixSettings.holder_name}</p>
+                                                </div>
+
+                                                <div className="pt-2">
+                                                    <div className="flex items-center gap-2 bg-white border border-zinc-200 p-3 rounded-xl">
+                                                        <div className="flex-1 overflow-hidden">
+                                                            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-0.5">Chave PIX ({pixSettings.key_type})</p>
+                                                            <p className="font-mono text-sm font-bold text-zinc-800 truncate">{pixSettings.pix_key}</p>
+                                                        </div>
+                                                        <button
+                                                            onClick={handleCopyPix}
+                                                            className="p-2 hover:bg-zinc-100 rounded-lg transition-colors text-zinc-600 active:scale-95"
+                                                            title="Copiar chave"
+                                                        >
+                                                            {copiedPix ? <Check className="w-5 h-5 text-green-500" /> : <Copy className="w-5 h-5" />}
+                                                        </button>
+                                                    </div>
+                                                    {copiedPix && <span className="text-[10px] font-bold text-green-600 mt-1 block">Chave copiada!</span>}
+                                                </div>
+
+                                                <div className="bg-primary/10 text-primary p-3 rounded-xl text-xs font-bold leading-relaxed">
+                                                    ⚠️ Importante: Envie o comprovante no WhatsApp que abriu para confirmarmos seu pedido mais rápido!
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-center">
+                                                <p className="text-sm font-bold text-yellow-800 mb-2">
+                                                    💬 Entre em contato pelo WhatsApp
+                                                </p>
+                                                <p className="text-xs text-yellow-700">
+                                                    Nossa equipe enviará os dados do PIX para você realizar o pagamento.
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
