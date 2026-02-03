@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, MapPin, Phone, User, Send, Clock, LocateFixed, Copy, Check, CreditCard, Save, Info } from 'lucide-react'
+import { X, MapPin, Phone, User, Send, Clock, LocateFixed, Copy, Check, CreditCard, Save, Info, DollarSign } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { supabase } from '../lib/supabase'
 
@@ -516,8 +516,8 @@ export default function Checkout({ isOpen, onClose }) {
                                                             type="button"
                                                             onClick={copyPixKey}
                                                             className={`p-3 rounded-xl font-bold transition-all ${copied
-                                                                    ? 'bg-green-500 text-white'
-                                                                    : 'bg-primary text-white hover:bg-red-900'
+                                                                ? 'bg-green-500 text-white'
+                                                                : 'bg-primary text-white hover:bg-red-900'
                                                                 }`}
                                                         >
                                                             {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
@@ -802,8 +802,8 @@ export default function Checkout({ isOpen, onClose }) {
                                                                     type="button"
                                                                     onClick={copyPixKey}
                                                                     className={`p-3 rounded-xl font-bold transition-all ${copied
-                                                                            ? 'bg-green-500 text-white'
-                                                                            : 'bg-blue-500 text-white hover:bg-blue-600'
+                                                                        ? 'bg-green-500 text-white'
+                                                                        : 'bg-blue-500 text-white hover:bg-blue-600'
                                                                         }`}
                                                                 >
                                                                     {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}

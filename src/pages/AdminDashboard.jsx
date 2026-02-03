@@ -235,13 +235,34 @@ export default function AdminDashboard() {
         navigate('/admin')
     }
 
-    const updateOrderStatus = async (orderId, newStatus) => {
+    const updateOrderStatus = async (orderId, newStatus, orderInfo = null) => {
         const { error } = await supabase
             .from('orders')
             .update({ status: newStatus })
             .eq('id', orderId)
 
-        if (error) console.error('Error updating status:', error)
+        if (error) {
+            console.error('Error updating status:', error)
+        } else if (orderInfo) {
+            // Sugerir envio de mensagem conforme o novo status
+            let type = ''
+            let confirmMsg = ''
+
+            if (newStatus === 'preparando') {
+                type = 'forno'
+                confirmMsg = `Deseja avisar ${orderInfo.user_name} que o pedido entrou no forno?`
+            } else if (newStatus === 'entrega') {
+                type = 'saida'
+                confirmMsg = `Deseja avisar ${orderInfo.user_name} que o pedido saiu para entrega?`
+            } else if (newStatus === 'pendente') {
+                type = 'recebido'
+                confirmMsg = `Deseja avisar ${orderInfo.user_name} que o pedido foi recebido?`
+            }
+
+            if (type && window.confirm(confirmMsg)) {
+                sendWhatsAppMessage(orderInfo.user_phone, orderInfo.user_name, type)
+            }
+        }
     }
 
     const toggleStatus = async (product) => {
@@ -323,10 +344,12 @@ export default function AdminDashboard() {
         let message = ''
         const cleanPhone = phone.replace(/\D/g, '')
 
-        if (type === 'saida') {
-            message = `Segura o coração (e a fome), ${name}! 🍕 Sua *Pizzaria Ramos* favorita já está no asfalto. O entregador tá inspirado e o cheirinho tá de matar! Prepara a mesa que a nave tá chegando! 🛵💨🔥`
-        } else if (type === 'pronto') {
-            message = `Aviso importante, ${name}! 🚨 Sua pizza na *Pizzaria Ramos* acaba de sair do forno e está mais bonita que boleto pago! Já está prontinha te esperando. Vem logo antes que a gente morda um pedaço! 🍕😋✨`
+        if (type === 'recebido') {
+            message = `Olá, *${name}*! 🍕 Recebemos o seu pedido na *Pizzaria Ramos*.\n\nJá estamos processando tudo por aqui e notificaremos você assim que ele entrar no forno! 🔥\n\nAgradecemos muito pela sua preferência! ✨`
+        } else if (type === 'forno') {
+            message = `Olá, *${name}*! Ótimas notícias: seu pedido já está no forno! 🍕🔥\n\nNossos pizzaiolos estão caprichando para que sua experiência seja deliciosa. Em breve sairá para entrega! 🛵💨\n\n*Pizzaria Ramos agradece!*`
+        } else if (type === 'saida') {
+            message = `Olá, *${name}*! Seu pedido da *Pizzaria Ramos* acabou de sair para entrega! 🛵💨\n\nPrepare a mesa que o sabor está chegando! 🍕✨\n\nMuito obrigado pela compra! Esperamos que aproveite cada fatia e volte sempre. *Bom apetite!* 😋`
         }
 
         const url = `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`
@@ -544,9 +567,16 @@ export default function AdminDashboard() {
                                                             <p className="text-xs text-secondary font-black">{order.user_phone}</p>
                                                             <div className="flex gap-1">
                                                                 <button
-                                                                    onClick={() => sendWhatsAppMessage(order.user_phone, order.user_name, 'pronto')}
+                                                                    onClick={() => sendWhatsAppMessage(order.user_phone, order.user_name, 'recebido')}
+                                                                    className="p-1.5 bg-amber-100 text-amber-600 rounded-lg hover:bg-amber-200 transition-colors"
+                                                                    title="Avisar que recebeu"
+                                                                >
+                                                                    <Bell className="w-3 h-3" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => sendWhatsAppMessage(order.user_phone, order.user_name, 'forno')}
                                                                     className="p-1.5 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors"
-                                                                    title="Avisar que está pronto"
+                                                                    title="Avisar que está no forno"
                                                                 >
                                                                     <MessageCircle className="w-3 h-3" />
                                                                 </button>
@@ -633,28 +663,28 @@ export default function AdminDashboard() {
 
                                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                                                     <button
-                                                        onClick={() => updateOrderStatus(order.id, 'preparando')}
+                                                        onClick={() => updateOrderStatus(order.id, 'preparando', order)}
                                                         className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1 ${order.status === 'preparando' ? 'border-blue-500 bg-blue-50 text-blue-600' : 'border-zinc-50 bg-zinc-50 text-zinc-400 hover:border-zinc-200'}`}
                                                     >
                                                         <CheckCircle2 className="w-5 h-5" />
                                                         <span className="text-[10px] font-black uppercase tracking-tighter">Preparo</span>
                                                     </button>
                                                     <button
-                                                        onClick={() => updateOrderStatus(order.id, 'entrega')}
+                                                        onClick={() => updateOrderStatus(order.id, 'entrega', order)}
                                                         className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1 ${order.status === 'entrega' ? 'border-purple-500 bg-purple-50 text-purple-600' : 'border-zinc-50 bg-zinc-50 text-zinc-400 hover:border-zinc-200'}`}
                                                     >
                                                         <Truck className="w-5 h-5" />
                                                         <span className="text-[10px] font-black uppercase tracking-tighter">Entrega</span>
                                                     </button>
                                                     <button
-                                                        onClick={() => updateOrderStatus(order.id, 'entregue')}
+                                                        onClick={() => updateOrderStatus(order.id, 'entregue', order)}
                                                         className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1 ${order.status === 'entregue' ? 'border-green-500 bg-green-50 text-green-600' : 'border-zinc-50 bg-zinc-50 text-zinc-400 hover:border-zinc-200'}`}
                                                     >
                                                         <CheckCircle2 className="w-5 h-5" />
                                                         <span className="text-[10px] font-black uppercase tracking-tighter">Finalizar</span>
                                                     </button>
                                                     <button
-                                                        onClick={() => updateOrderStatus(order.id, 'cancelado')}
+                                                        onClick={() => updateOrderStatus(order.id, 'cancelado', order)}
                                                         className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1 ${order.status === 'cancelado' ? 'border-red-500 bg-red-50 text-red-600' : 'border-zinc-50 bg-zinc-50 text-zinc-400 hover:border-zinc-200'}`}
                                                     >
                                                         <XCircle className="w-5 h-5" />
