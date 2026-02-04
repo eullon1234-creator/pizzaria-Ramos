@@ -22,16 +22,16 @@
 ## 📂 Critical Files by Concern
 
 **State & Data Flow:**
-- [src/context/CartContext.jsx](src/context/CartContext.jsx) - Single source of truth for cart state; tracks items with variation+quantity
-- [src/lib/supabase.js](src/lib/supabase.js) - Supabase client init (env vars: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY)
+- [src/context/CartContext.jsx](../src/context/CartContext.jsx) - Single source of truth for cart state; tracks items with variation+quantity
+- [src/lib/supabase.js](../src/lib/supabase.js) - Supabase client init (env vars: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY)
 
 **Key Components (ordered by data dependency):**
-- [src/pages/Store.jsx](src/pages/Store.jsx) - Entry point rendering Hero + Menu
-- [src/components/Menu.jsx](src/components/Menu.jsx) - Fetches categories & products from Supabase; filters by category
-- [src/components/SizePicker.jsx](src/components/SizePicker.jsx) - Modal for selecting product variation (size/price combo)
-- [src/components/CartDrawer.jsx](src/components/CartDrawer.jsx) - Side drawer with cart items; uses CartContext
-- [src/components/Checkout.jsx](src/components/Checkout.jsx) - Final order screen with PIX display
-- [src/components/PixSettingsModal.jsx](src/components/PixSettingsModal.jsx) - Admin PIX config (4 key types: CPF, CNPJ, Email, Phone)
+- [src/pages/Store.jsx](../src/pages/Store.jsx) - Entry point rendering Hero + Menu
+- [src/components/Menu.jsx](../src/components/Menu.jsx) - Fetches categories & products from Supabase; filters by category
+- [src/components/SizePicker.jsx](../src/components/SizePicker.jsx) - Modal for selecting product variation (size/price combo)
+- [src/components/CartDrawer.jsx](../src/components/CartDrawer.jsx) - Side drawer with cart items; uses CartContext
+- [src/components/Checkout.jsx](../src/components/Checkout.jsx) - Final order screen with PIX display
+- [src/components/PixSettingsModal.jsx](../src/components/PixSettingsModal.jsx) - Admin PIX config (4 key types: CPF, CNPJ, Email, Phone)
 
 ## 🔄 Data Flow Patterns
 
@@ -78,16 +78,16 @@ saves to store_settings table → persists across sessions
 - Controlled by parent state (`isOpen` boolean)
 - Pass `onClose` callback to dismiss
 - Center with `fixed inset-0 flex items-center justify-center`
-- Example: [src/components/SizePicker.jsx](src/components/SizePicker.jsx)
+- Example: [src/components/SizePicker.jsx](../src/components/SizePicker.jsx)
 
 **Async Data Fetch:**
 - Use `useEffect` with empty dependency to fetch on mount
 - Wrap in try-catch with `setLoading` boolean state
 - Handle Supabase errors: `.error` on response object
-- Example: [src/components/Menu.jsx](src/components/Menu.jsx) lines 19-44
+- Example: [src/components/Menu.jsx](../src/components/Menu.jsx) (lines 19-44)
 
 **Form Submission:**
-- Validate input with regex (see [src/components/PixSettingsModal.jsx](src/components/PixSettingsModal.jsx) for examples)
+- Validate input with regex (see [src/components/PixSettingsModal.jsx](../src/components/PixSettingsModal.jsx) for examples)
 - Show loading state during save
 - Display toast-like success/error messages
 - Clear form on success
@@ -161,11 +161,11 @@ Environment vars are injected at build time via `import.meta.env.VITE_*`
 
 ## 📚 Documentation Files
 
-- [QUICK_START_PIX.md](QUICK_START_PIX.md) - Fast 5-min PIX setup
-- [PIX_INTEGRATION_GUIDE.md](PIX_INTEGRATION_GUIDE.md) - Detailed PIX flows
-- [DATABASE_SETUP.md](DATABASE_SETUP.md) - SQL + schema reference
-- [PIX_DIAGRAMS.md](PIX_DIAGRAMS.md) - Visual flow diagrams
-- [ENTREGA_FINAL.md](ENTREGA_FINAL.md) - Complete delivery summary
+- [QUICK_START_PIX.md](../QUICK_START_PIX.md) - Fast 5-min PIX setup
+- [PIX_INTEGRATION_GUIDE.md](../PIX_INTEGRATION_GUIDE.md) - Detailed PIX flows
+- [DATABASE_SETUP.md](../DATABASE_SETUP.md) - SQL + schema reference
+- [PIX_DIAGRAMS.md](../PIX_DIAGRAMS.md) - Visual flow diagrams
+- [ENTREGA_FINAL.md](../ENTREGA_FINAL.md) - Complete delivery summary
 
 ## ⚡ Performance Tips
 

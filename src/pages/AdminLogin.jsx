@@ -16,12 +16,12 @@ export default function AdminLogin() {
         setError(null)
 
         try {
-            const { data, error } = await supabase.auth.signInWithPassword({
+            const { error: authError } = await supabase.auth.signInWithPassword({
                 email,
                 password,
             })
 
-            if (error) throw error
+            if (authError) throw authError
             navigate('/admin/dashboard')
         } catch (err) {
             setError('Credenciais inválidas ou erro de conexão.')

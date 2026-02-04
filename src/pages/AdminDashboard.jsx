@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { Plus, Edit, Trash2, Power, Pizza, LayoutDashboard, LogOut, ChevronRight, Clock, MapPin, User, CheckCircle2, Package, Truck, XCircle, Bell } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -24,7 +24,6 @@ export default function AdminDashboard() {
 
     const AVAILABLE_SIZES = ['Lata 350ml', '1 Litro', '1.5 Litro', '2 Litros']
     const navigate = useNavigate()
-    const audioRef = useRef(null)
 
     useEffect(() => {
         checkUser()
@@ -477,7 +476,7 @@ export default function AdminDashboard() {
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                     {products.filter(p => p.category_id === category.id).map(product => (
                                         <div key={product.id} className="bg-white border border-zinc-100 rounded-2xl p-4 flex items-center gap-4 hover:shadow-lg transition-all">
-                                            <div className="w-16 h-16 bg-zinc-50 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0 border border-zinc-100">
+                                            <div className="w-16 h-16 bg-zinc-50 rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-zinc-100">
                                                 {product.image_url ? (
                                                     <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                                                 ) : (
@@ -605,7 +604,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Mobile Navigation */}
-                <div className="md:hidden fixed bottom-0 left-0 right-0 bg-zinc-900 border-t-2 border-secondary flex justify-around p-2 z-[100] safe-bottom">
+                <div className="md:hidden fixed bottom-0 left-0 right-0 bg-zinc-900 border-t-2 border-secondary flex justify-around p-2 z-100 safe-bottom">
                     <button
                         onClick={() => setView('orders')}
                         className={`flex flex-col items-center gap-1 p-2 transition-all ${view === 'orders' ? 'text-secondary scale-110' : 'text-zinc-500'}`}

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { motion } from 'framer-motion'
 import { Plus, Info, Pizza, Sparkles } from 'lucide-react'
+import { motion } from 'framer-motion'
 import SizePicker from './SizePicker'
 import HalfAndHalfModal from './HalfAndHalfModal'
 import { useCart } from '../context/CartContext'
@@ -105,7 +105,7 @@ export default function Menu() {
                     >
                         <button
                             onClick={() => setIsHalfModalOpen(true)}
-                            className="w-full bg-gradient-to-r from-primary to-red-600 p-6 rounded-3xl text-white flex items-center justify-between group overflow-hidden relative shadow-xl shadow-primary/20 active:scale-[0.98] transition-all"
+                            className="w-full bg-linear-to-r from-primary to-red-600 p-6 rounded-3xl text-white flex items-center justify-between group overflow-hidden relative shadow-xl shadow-primary/20 active:scale-[0.98] transition-all"
                         >
                             <div className="relative z-10 text-left">
                                 <div className="flex items-center gap-2 mb-1">

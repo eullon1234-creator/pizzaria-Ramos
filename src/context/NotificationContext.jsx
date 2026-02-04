@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useCallback } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { CheckCircle, XCircle, Info, TriangleAlert } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
+import { CheckCircle, XCircle, Info, TriangleAlert, X } from 'lucide-react';
 
 const NotificationContext = createContext();
 
@@ -28,7 +28,7 @@ function Notification({ message, type = 'info', id, onDismiss }) {
     const color = colors[type];
 
     return (
-        <motion.div
+        <div
             layout
             initial={{ opacity: 0, y: 50, scale: 0.3 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -41,12 +41,18 @@ function Notification({ message, type = 'info', id, onDismiss }) {
             <button onClick={() => onDismiss(id)} className="absolute top-2 right-2 text-white/70 hover:text-white">
                 <X className="w-5 h-5" />
             </button>
-        </motion.div>
+        </div>
     );
 }
 
 export function NotificationProvider({ children }) {
     const [notifications, setNotifications] = useState([]);
+
+    const dismissNotification = useCallback((id) => {
+        setNotifications(currentNotifications =>
+            currentNotifications.filter(n => n.id !== id)
+        );
+    }, []);
 
     const addNotification = useCallback((message, type = 'info') => {
         const id = Date.now();
@@ -55,18 +61,12 @@ export function NotificationProvider({ children }) {
         setTimeout(() => {
             dismissNotification(id);
         }, 5000);
-    }, []);
-
-    const dismissNotification = useCallback((id) => {
-        setNotifications(currentNotifications =>
-            currentNotifications.filter(n => n.id !== id)
-        );
-    }, []);
+    }, [dismissNotification]);
 
     return (
         <NotificationContext.Provider value={addNotification}>
             {children}
-            <div className="fixed bottom-4 right-4 z-[100]">
+            <div className="fixed bottom-4 right-4 z-100">
                 <AnimatePresence>
                     {notifications.map(n => (
                         <Notification key={n.id} {...n} onDismiss={dismissNotification} />

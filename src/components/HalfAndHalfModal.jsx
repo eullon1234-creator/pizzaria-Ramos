@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { X, Check, Pizza, ChevronRight, ChevronLeft } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useCart } from '../context/CartContext'
@@ -11,13 +11,14 @@ export default function HalfAndHalfModal({ isOpen, onClose, products }) {
     const { addToCart } = useCart()
 
     // Reset state when modal opens/closes
-    useEffect(() => {
+    React.useEffect(() => {
         if (!isOpen) {
-            setStep(1)
-            setSelectedSize(null)
-            setFlavor1(null)
-            setFlavor2(null)
+            return
         }
+        setStep(1)
+        setSelectedSize(null)
+        setFlavor1(null)
+        setFlavor2(null)
     }, [isOpen])
 
     if (!isOpen) return null
@@ -68,7 +69,7 @@ export default function HalfAndHalfModal({ isOpen, onClose, products }) {
 
     return (
         <AnimatePresence>
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -171,7 +172,7 @@ export default function HalfAndHalfModal({ isOpen, onClose, products }) {
                                                     : 'border-zinc-100 hover:border-zinc-200 bg-zinc-50'
                                                     }`}
                                             >
-                                                <div className="w-14 h-14 rounded-xl overflow-hidden bg-zinc-200 flex-shrink-0">
+                                                <div className="w-14 h-14 rounded-xl overflow-hidden bg-zinc-200 shrink-0">
                                                     {p.image_url ? (
                                                         <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" />
                                                     ) : (

@@ -153,7 +153,7 @@ export default function Checkout({ isOpen, onClose }) {
 
     const fetchPixSettings = async () => {
         try {
-            const { data, error } = await supabase
+            const { data } = await supabase
                 .from('store_settings')
                 .select('*')
                 .eq('key', 'pix_config')
@@ -476,7 +476,7 @@ export default function Checkout({ isOpen, onClose }) {
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-200 flex items-center justify-center p-4">
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -846,7 +846,7 @@ export default function Checkout({ isOpen, onClose }) {
                                                     onChange={e => setFormData({ ...formData, tipoEntrega: e.target.value })}
                                                 />
                                                 <span className="block font-black text-xs uppercase tracking-tighter">Imediata</span>
-                                                <span className="block text-[10px] text-zinc-500 font-bold uppercase mt-1 italic text-secondary">O mais rápido</span>
+                                                <span className="block text-[10px] text-secondary font-bold uppercase mt-1 italic">O mais rápido</span>
                                                 <span className="block text-[10px] text-zinc-400 font-bold mt-0.5">Previsão: 45min - 1h30min</span>
                                             </label>
                                             <label className={`flex-1 p-4 rounded-2xl border-2 transition-all cursor-pointer ${formData.tipoEntrega === 'agendada' ? 'border-primary bg-primary/5' : 'border-zinc-100 bg-zinc-50 opacity-60'}`}>

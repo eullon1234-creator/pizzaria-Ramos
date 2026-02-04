@@ -34,7 +34,7 @@ export default function BusinessHoursModal({ isOpen, onClose }) {
     const fetchBusinessHours = async () => {
         try {
             setLoading(true)
-            const { data, error } = await supabase
+            const { data } = await supabase
                 .from('store_settings')
                 .select('*')
                 .eq('key', 'business_hours')
@@ -117,7 +117,7 @@ export default function BusinessHoursModal({ isOpen, onClose }) {
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-200 flex items-center justify-center p-4">
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -169,7 +169,7 @@ export default function BusinessHoursModal({ isOpen, onClose }) {
                                             }`}
                                     >
                                         <div className="flex items-center justify-between gap-4 flex-wrap">
-                                            <label className="flex items-center gap-3 cursor-pointer flex-1 min-w-[120px]">
+                                            <label className="flex items-center gap-3 cursor-pointer flex-1 min-w-30">
                                                 <input
                                                     type="checkbox"
                                                     checked={schedule[day.id]?.open || false}
