@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Header from './components/Header'
 import CartDrawer from './components/CartDrawer'
 import FloatingCart from './components/FloatingCart'
+import PWAPrompt from './components/PWAPrompt'
 import { CartProvider } from './context/CartContext'
 import Store from './pages/Store'
 import AdminLogin from './pages/AdminLogin'
@@ -58,6 +59,9 @@ function App() {
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          
+          {/* PWA Prompts */}
+          <PWAPrompt />
         </div>
       </BrowserRouter>
     </CartProvider>
