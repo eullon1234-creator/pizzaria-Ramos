@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { Plus, Edit, Trash2, Power, Pizza, LayoutDashboard, LogOut, ChevronRight, Clock, MapPin, User, CircleCheck, Package, Truck, CircleX, Bell, QrCode, DollarSign, Save, Upload, TrendingUp, Search, MessageCircle, Filter } from 'lucide-react'
+import { Plus, Edit, Trash2, Power, Pizza, LayoutDashboard, LogOut, ChevronRight, Clock, MapPin, User, CircleCheck, CheckCircle2, Package, Truck, CircleX, Bell, QrCode, DollarSign, Save, Upload, TrendingUp, Search, MessageCircle, Filter } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import ProductModal from '../components/ProductModal'
 import CategoryModal from '../components/CategoryModal'
@@ -198,8 +198,19 @@ export default function AdminDashboard() {
     }
 
     async function checkUser() {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) navigate('/admin')
+        try {
+            const { data, error } = await supabase.auth.getSession()
+            if (error) {
+                await supabase.auth.signOut()
+                navigate('/admin')
+                return
+            }
+            if (!data?.session) navigate('/admin')
+        } catch (error) {
+            console.error('Erro ao recuperar sessão:', error)
+            await supabase.auth.signOut()
+            navigate('/admin')
+        }
     }
 
     async function fetchData() {
