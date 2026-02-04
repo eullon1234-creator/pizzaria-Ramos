@@ -1,16 +1,140 @@
-# React + Vite
+# 🍕 Pizzaria Ramos - Sistema de Delivery
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Sistema completo de delivery para pizzaria com painel administrativo, desenvolvido com React + Vite + Supabase.
 
-Currently, two official plugins are available:
+## ✨ Funcionalidades
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### 👥 Para Clientes
 
-## React Compiler
+- **Menu Dinâmico**: Navegação por categorias (Pizzas, Porções, Açaí, Molhos, Bebidas)
+- **Pizza Meio a Meio**: Sistema exclusivo para montar pizzas com 2 sabores
+- **Seletor de Tamanhos**: Escolha de tamanhos e sabores para bebidas
+- **Carrinho Inteligente**: Gerenciamento completo de pedidos
+- **Checkout Completo**:
+  - Formulário de entrega
+  - Múltiplas formas de pagamento (PIX, Dinheiro, Cartão)
+  - **PIX com QR Code**: Escaneie ou copie a chave PIX
+  - Agendamento de entrega
+  - Envio automático para WhatsApp
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 👨‍💼 Para Administradores
 
-## Expanding the ESLint configuration
+- **Monitor de Pedidos em Tempo Real**:
+  - Notificação sonora para novos pedidos
+  - Atualização de status (Pendente → Preparando → Entrega → Entregue)
+  - Visualização completa dos dados do cliente
+  
+- **Gestão do Cardápio**:
+  - CRUD completo de produtos
+  - Upload de imagens
+  - Múltiplos tamanhos e preços
+  - Ativar/Desativar produtos
+  
+- **Sabores de Bebidas**:
+  - Gerenciar sabores disponíveis
+  - Controle de disponibilidade por tamanho
+  
+- **Categorias**:
+  - Criar e editar categorias
+  - Ordenação personalizada
+  
+- **⭐ Configurações PIX** (NOVO):
+  - Upload de QR Code
+  - Cadastro de chave PIX
+  - Ativar/Desativar PIX como forma de pagamento
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 🚀 Tecnologias
+
+- **Frontend**: React 19.2 + Vite
+- **Estilização**: Tailwind CSS 4.1
+- **Animações**: Framer Motion
+- **Backend**: Supabase (PostgreSQL)
+- **Roteamento**: React Router DOM
+- **Ícones**: Lucide React
+
+## 📦 Instalação
+
+```bash
+# Clone o repositório
+git clone [seu-repositorio]
+
+# Instale as dependências
+npm install
+
+# Configure as variáveis de ambiente
+# Crie um arquivo .env com:
+VITE_SUPABASE_URL=sua_url_supabase
+VITE_SUPABASE_ANON_KEY=sua_chave_supabase
+
+# Execute o projeto
+npm run dev
+```
+
+## 🗄️ Estrutura do Banco de Dados
+
+### Tabelas Principais
+
+- `categories` - Categorias do menu
+- `products` - Produtos do cardápio
+- `product_prices` - Preços e tamanhos dos produtos
+- `beverage_flavors` - Sabores de bebidas
+- `orders` - Pedidos dos clientes
+- `order_items` - Itens dos pedidos
+- **`pix_settings`** - Configurações PIX (QR Code e chave)
+
+## 🎨 Paleta de Cores
+
+- **Primary**: `#7f1d1d` (Vermelho/Bordeaux)
+- **Secondary**: `#fbbf24` (Amarelo/Dourado)
+- **Background**: `#fafafa` (Zinc-50)
+
+## 📱 Responsividade
+
+- Design mobile-first
+- Menu de navegação adaptativo
+- Componentes otimizados para todas as telas
+
+## 🔐 Autenticação
+
+- Sistema de login para administradores
+- Proteção de rotas administrativas
+- Sessão gerenciada pelo Supabase Auth
+
+## 📞 Integração WhatsApp
+
+- Envio automático de pedidos
+- Formatação profissional da mensagem
+- Número configurável
+
+## 🎯 Próximas Funcionalidades
+
+- [ ] Sistema de cupons de desconto
+- [ ] Histórico de pedidos do cliente
+- [ ] Relatórios e analytics
+- [ ] Notificações push
+- [ ] App mobile (React Native)
+
+## 📄 Licença
+
+Desenvolvido para Pizzaria Ramos © 2026
+
+## 🛠️ Comandos Úteis
+
+```bash
+# Desenvolvimento
+npm run dev
+
+# Build para produção
+npm run build
+
+# Preview da build
+npm run preview
+
+# Lint
+npm run lint
+```
+
+## 📞 Suporte
+
+WhatsApp: (86) 99447-1909
+Horário: Terça a Domingo, 18:00 às 23:30

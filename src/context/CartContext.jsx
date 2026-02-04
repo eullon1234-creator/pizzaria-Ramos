@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState } from 'react'
 
 const CartContext = createContext()
 
@@ -39,6 +39,11 @@ export function CartProvider({ children }) {
         }))
     }
 
+    const clearCart = () => {
+        setCart([])
+        setIsCartOpen(false)
+    }
+
     const cartTotal = cart.reduce((acc, item) => acc + (item.variation.price * item.quantity), 0)
     const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0)
 
@@ -48,6 +53,7 @@ export function CartProvider({ children }) {
             addToCart,
             removeFromCart,
             updateQuantity,
+            clearCart,
             cartTotal,
             cartCount,
             isCartOpen,

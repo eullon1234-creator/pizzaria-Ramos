@@ -65,7 +65,7 @@ export default function SizePicker({ product, isOpen, onClose }) {
 
     return (
         <AnimatePresence>
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -79,13 +79,16 @@ export default function SizePicker({ product, isOpen, onClose }) {
                     animate={{ scale: 1, opacity: 1, y: 0 }}
                     exit={{ scale: 0.9, opacity: 0, y: 20 }}
                     className="relative bg-white w-full max-w-md rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="size-picker-title"
                 >
                     <div className="p-6 overflow-y-auto scrollbar-hide">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-2xl font-black text-primary uppercase italic tracking-tighter">
+                            <h3 id="size-picker-title" className="text-2xl font-black text-primary uppercase italic tracking-tighter">
                                 {isBeverage ? 'Personalize sua Bebida' : 'Escolha o Tamanho'}
                             </h3>
-                            <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
+                            <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors" aria-label="Fechar seletor de tamanho">
                                 <X className="w-6 h-6" />
                             </button>
                         </div>

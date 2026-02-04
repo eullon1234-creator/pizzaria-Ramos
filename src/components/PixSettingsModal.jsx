@@ -65,7 +65,7 @@ export default function PixSettingsModal({ isOpen, onClose }) {
     const fetchPixSettings = async () => {
         try {
             setLoading(true)
-            const { data, error } = await supabase
+            const { data } = await supabase
                 .from('store_settings')
                 .select('*')
                 .eq('key', 'pix_config')
@@ -146,7 +146,7 @@ export default function PixSettingsModal({ isOpen, onClose }) {
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-200 flex items-center justify-center p-4">
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -184,7 +184,7 @@ export default function PixSettingsModal({ isOpen, onClose }) {
                                 <form onSubmit={handleSave} className="p-6 space-y-4">
                                     {error && (
                                         <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex gap-3">
-                                            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                                            <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
                                             <p className="text-sm text-red-700 font-medium">{error}</p>
                                         </div>
                                     )}

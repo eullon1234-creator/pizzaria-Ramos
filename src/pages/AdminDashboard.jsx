@@ -1,14 +1,15 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { Plus, Edit, Trash2, Power, Pizza, LayoutDashboard, LogOut, ChevronRight, Clock, MapPin, User, CheckCircle2, Package, Truck, XCircle, Bell } from 'lucide-react'
+import { Plus, Edit, Trash2, Power, Pizza, LayoutDashboard, LogOut, ChevronRight, Clock, MapPin, User, CircleCheck, CheckCircle2, Package, Truck, CircleX, Bell, QrCode, DollarSign, Save, Upload, TrendingUp, Search, MessageCircle, Filter } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import ProductModal from '../components/ProductModal'
 import CategoryModal from '../components/CategoryModal'
 import PixSettingsModal from '../components/PixSettingsModal'
 import BusinessHoursModal from '../components/BusinessHoursModal'
+import StatsDashboard from '../components/StatsDashboard'
 
 export default function AdminDashboard() {
-    const [view, setView] = useState('orders') // default to orders
+    const [view, setView] = useState('stats') // Ver estatísticas primeiro ao entrar na gerência
     const [products, setProducts] = useState([])
     const [categories, setCategories] = useState([])
     const [orders, setOrders] = useState([])
@@ -21,10 +22,14 @@ export default function AdminDashboard() {
     const [editingCategory, setEditingCategory] = useState(null)
     const [flavors, setFlavors] = useState([])
     const [newFlavor, setNewFlavor] = useState('')
+    const [pixSettings, setPixSettings] = useState(null)
+    const [savingPix, setSavingPix] = useState(false)
+    const [searchQuery, setSearchQuery] = useState('')
+    const [statusFilter, setStatusFilter] = useState('todos')
+    const [currentTime, setCurrentTime] = useState(new Date())
 
     const AVAILABLE_SIZES = ['Lata 350ml', '1 Litro', '1.5 Litro', '2 Litros']
     const navigate = useNavigate()
-    const audioRef = useRef(null)
 
     useEffect(() => {
         checkUser()
@@ -51,14 +56,22 @@ export default function AdminDashboard() {
             })
             .subscribe()
 
+        // Update clock every minute for timers
+        const timerInterval = setInterval(() => {
+            setCurrentTime(new Date())
+        }, 60000)
+
         return () => {
             supabase.removeChannel(channel)
+            clearInterval(timerInterval)
         }
     }, [])
 
     useEffect(() => {
         if (view === 'flavors') {
             fetchFlavors()
+        } else if (view === 'pix') {
+            fetchPixSettings()
         }
     }, [view])
 
@@ -113,9 +126,91 @@ export default function AdminDashboard() {
         }
     }
 
+    async function fetchPixSettings() {
+        const { data } = await supabase.from('pix_settings').select('*').limit(1).single()
+        if (data) {
+            setPixSettings(data)
+        } else {
+            // Create default if doesn't exist
+            const { data: newData } = await supabase
+                .from('pix_settings')
+                .insert({
+                    pix_key: '',
+                    is_active: true,
+                    holder_name: '',
+                    bank_name: '',
+                    key_type: 'cpf'
+                })
+                .select()
+                .single()
+            setPixSettings(newData)
+        }
+    }
+
+    const updatePixSettings = async () => {
+        if (!pixSettings) return
+        setSavingPix(true)
+        const { error } = await supabase
+            .from('pix_settings')
+            .update({
+                pix_key: pixSettings.pix_key,
+                qr_code_url: pixSettings.qr_code_url,
+                is_active: pixSettings.is_active,
+                holder_name: pixSettings.holder_name,
+                bank_name: pixSettings.bank_name,
+                key_type: pixSettings.key_type
+            })
+            .eq('id', pixSettings.id)
+
+        if (!error) {
+            alert('✅ Configurações PIX salvas com sucesso!')
+        } else {
+            alert('❌ Erro ao salvar configurações PIX')
+        }
+        setSavingPix(false)
+    }
+
+    const handleQrCodeUpload = async (e) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        try {
+            const fileExt = file.name.split('.').pop()
+            const fileName = `qr-code-${Date.now()}.${fileExt}`
+            const filePath = `pix/${fileName}`
+
+            const { error: uploadError } = await supabase.storage
+                .from('images')
+                .upload(filePath, file)
+
+            if (uploadError) throw uploadError
+
+            const { data } = supabase.storage.from('images').getPublicUrl(filePath)
+            const publicUrl = data?.publicUrl
+
+            if (publicUrl) {
+                setPixSettings({ ...pixSettings, qr_code_url: publicUrl })
+            }
+        } catch (error) {
+            console.error('Error uploading QR Code:', error)
+            alert('Erro ao fazer upload do QR Code')
+        }
+    }
+
     async function checkUser() {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) navigate('/admin')
+        try {
+            const { data, error } = await supabase.auth.getSession()
+            if (error) {
+                await supabase.auth.signOut()
+                navigate('/admin')
+                return
+            }
+            if (!data?.session) navigate('/admin')
+        } catch (error) {
+            console.error('Erro ao recuperar sessão:', error)
+            await supabase.auth.signOut()
+            navigate('/admin')
+        }
     }
 
     async function fetchData() {
@@ -151,13 +246,34 @@ export default function AdminDashboard() {
         navigate('/admin')
     }
 
-    const updateOrderStatus = async (orderId, newStatus) => {
+    const updateOrderStatus = async (orderId, newStatus, orderInfo = null) => {
         const { error } = await supabase
             .from('orders')
             .update({ status: newStatus })
             .eq('id', orderId)
 
-        if (error) console.error('Error updating status:', error)
+        if (error) {
+            console.error('Error updating status:', error)
+        } else if (orderInfo) {
+            // Sugerir envio de mensagem conforme o novo status
+            let type = ''
+            let confirmMsg = ''
+
+            if (newStatus === 'preparando') {
+                type = 'forno'
+                confirmMsg = `Deseja avisar ${orderInfo.user_name} que o pedido entrou no forno?`
+            } else if (newStatus === 'entrega') {
+                type = 'saida'
+                confirmMsg = `Deseja avisar ${orderInfo.user_name} que o pedido saiu para entrega?`
+            } else if (newStatus === 'pendente') {
+                type = 'recebido'
+                confirmMsg = `Deseja avisar ${orderInfo.user_name} que o pedido foi recebido?`
+            }
+
+            if (type && window.confirm(confirmMsg)) {
+                sendWhatsAppMessage(orderInfo.user_phone, orderInfo.user_name, type)
+            }
+        }
     }
 
     const toggleStatus = async (product) => {
@@ -214,13 +330,59 @@ export default function AdminDashboard() {
         }
     }
 
+    const getTimeElapsed = (createdAt) => {
+        const diff = currentTime - new Date(createdAt)
+        const minutes = Math.floor(diff / 60000)
+
+        if (minutes < 1) return 'Agora'
+        if (minutes < 60) return `${minutes} min`
+        const hours = Math.floor(minutes / 60)
+        const mins = minutes % 60
+        return `${hours}h ${mins}m`
+    }
+
+    const getTimerColor = (createdAt, status) => {
+        if (status === 'entregue' || status === 'cancelado') return 'text-zinc-400'
+        const diff = currentTime - new Date(createdAt)
+        const minutes = Math.floor(diff / 60000)
+
+        if (minutes > 50) return 'text-red-500 font-black animate-pulse'
+        if (minutes > 30) return 'text-orange-500 font-bold'
+        return 'text-green-600 font-bold'
+    }
+
+    const sendWhatsAppMessage = (phone, name, type) => {
+        let message = ''
+        const cleanPhone = phone.replace(/\D/g, '')
+
+        if (type === 'recebido') {
+            message = `Olá, *${name}*! 🍕 Recebemos o seu pedido na *Pizzaria Ramos*.\n\nJá estamos processando tudo por aqui e notificaremos você assim que ele entrar no forno! 🔥\n\nAgradecemos muito pela sua preferência! ✨`
+        } else if (type === 'forno') {
+            message = `Olá, *${name}*! Ótimas notícias: seu pedido já está no forno! 🍕🔥\n\nNossos pizzaiolos estão caprichando para que sua experiência seja deliciosa. Em breve sairá para entrega! 🛵💨\n\n*Pizzaria Ramos agradece!*`
+        } else if (type === 'saida') {
+            message = `Olá, *${name}*! Seu pedido da *Pizzaria Ramos* acabou de sair para entrega! 🛵💨\n\nPrepare a mesa que o sabor está chegando! 🍕✨\n\nMuito obrigado pela compra! Esperamos que aproveite cada fatia e volte sempre. *Bom apetite!* 😋`
+        }
+
+        const url = `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`
+        window.open(url, '_blank')
+    }
+
+    const filteredOrders = orders.filter(order => {
+        const matchesSearch =
+            order.user_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            order.user_phone?.includes(searchQuery) ||
+            order.sequential_num?.toString().includes(searchQuery)
+
+        const matchesStatus = statusFilter === 'todos' || order.status === statusFilter
+
+        return matchesSearch && matchesStatus
+    })
+
     if (loading) return (
         <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-primary"></div>
         </div>
     )
-
-    // ... existing modal logic ...
 
     return (
         <div className="min-h-screen bg-zinc-50 flex">
@@ -235,6 +397,13 @@ export default function AdminDashboard() {
                 </div>
 
                 <nav className="flex-1 p-4 space-y-2">
+                    <button
+                        onClick={() => setView('stats')}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all ${view === 'stats' ? 'bg-primary text-white shadow-lg' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
+                    >
+                        <TrendingUp className="w-5 h-5" />
+                        Estatísticas
+                    </button>
                     <button
                         onClick={() => setView('orders')}
                         className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all ${view === 'orders' ? 'bg-primary text-white shadow-lg' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
@@ -268,6 +437,13 @@ export default function AdminDashboard() {
                         <Pizza className="w-5 h-5" />
                         Categorias
                     </button>
+                    <button
+                        onClick={() => setView('pix')}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all ${view === 'pix' ? 'bg-primary text-white shadow-lg' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
+                    >
+                        <QrCode className="w-5 h-5" />
+                        Configurar PIX
+                    </button>
                 </nav>
 
                 <div className="p-4 border-t border-zinc-800">
@@ -286,7 +462,7 @@ export default function AdminDashboard() {
                 <header className="bg-white border-b border-zinc-200 p-6 flex justify-between items-center sticky top-0 z-10 shadow-sm">
                     <div className="flex flex-col">
                         <h2 className="text-2xl font-black text-zinc-900 uppercase italic tracking-tighter">
-                            {view === 'orders' ? 'Monitor de Pedidos' : view === 'products' ? 'Gestão do Cardápio' : view === 'flavors' ? 'Sabores de Bebidas' : 'Gestão de Categorias'}
+                            {view === 'orders' ? 'Monitor de Pedidos' : view === 'products' ? 'Gestão do Cardápio' : view === 'flavors' ? 'Sabores de Bebidas' : view === 'pix' ? 'Configurações PIX' : view === 'stats' ? 'Dashboard Gerencial' : 'Gestão de Categorias'}
                         </h2>
                         {view === 'orders' && (
                             <div className="flex items-center gap-4 mt-1">
@@ -298,21 +474,15 @@ export default function AdminDashboard() {
                                     <span className="text-[10px] font-black uppercase tracking-widest text-green-600">Recebendo pedidos em tempo real</span>
                                 </div>
                                 <button
-                                    onClick={() => setPixModalOpen(true)}
+                                    onClick={() => setBusinessHoursModalOpen(true)}
                                     className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-1 hover:underline"
                                 >
-                                    <span className="text-lg">💠</span> Configurar PIX
-                                </button>
-                                <button
-                                    onClick={() => setBusinessHoursModalOpen(true)}
-                                    className="text-[10px] font-black uppercase tracking-widest text-green-600 flex items-center gap-1 hover:underline"
-                                >
-                                    <Clock className="w-4 h-4" /> Horários
+                                    <Clock className="w-4 h-4" /> Horários de Funcionamento
                                 </button>
                             </div>
                         )}
                     </div>
-                    {view !== 'orders' && view !== 'flavors' && (
+                    {view !== 'orders' && view !== 'flavors' && view !== 'pix' && (
                         <button
                             onClick={handleAdd}
                             className="btn-primary flex items-center gap-2 py-2 px-4 whitespace-nowrap"
@@ -324,148 +494,209 @@ export default function AdminDashboard() {
                 </header>
 
                 <div className="p-6 lg:p-10 space-y-8 no-scrollbar">
-                    {view === 'orders' ? (
-                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                            {orders.length === 0 ? (
-                                <div className="col-span-full py-20 text-center space-y-4">
-                                    <div className="bg-zinc-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto text-zinc-300">
-                                        <Package className="w-10 h-10" />
-                                    </div>
-                                    <h3 className="text-xl font-bold text-zinc-400 uppercase tracking-widest italic">Nenhum pedido hoje</h3>
+                    {view === 'stats' ? (
+                        <StatsDashboard />
+                    ) : view === 'orders' ? (
+                        <div className="space-y-6">
+                            {/* Controls Row */}
+                            <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-3xl border border-zinc-100 shadow-sm">
+                                <div className="flex-1 min-w-[300px] relative">
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 w-5 h-5" />
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar por cliente, pedido ou telefone..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="w-full pl-12 pr-4 py-3 bg-zinc-50 border-2 border-transparent focus:border-primary/20 focus:bg-white rounded-2xl outline-none transition-all font-bold text-zinc-700"
+                                    />
                                 </div>
-                            ) : (
-                                orders.map(order => (
-                                    <div
-                                        key={order.id}
-                                        className={`bg-white rounded-3xl overflow-hidden shadow-md border-2 transition-all hover:shadow-xl ${order.status === 'pendente' ? 'border-primary ring-4 ring-primary/5' : 'border-zinc-100'}`}
-                                    >
-                                        {/* Status Header */}
-                                        <div className={`px-6 py-4 flex justify-between items-center border-b ${getStatusStyles(order.status)}`}>
-                                            <div className="flex items-center gap-2">
-                                                <Clock className="w-4 h-4" />
-                                                <span className="text-xs font-black uppercase tracking-[0.2em]">PEDIDO #{order.sequential_num || '...'} • {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                            </div>
-                                            <span className="text-[10px] font-black uppercase tracking-widest italic">{order.status}</span>
+                                <div className="flex bg-zinc-100 p-1 rounded-2xl gap-1 overflow-x-auto no-scrollbar max-w-full">
+                                    {[
+                                        { id: 'todos', label: 'Todos' },
+                                        { id: 'pendente', label: 'Pendentes' },
+                                        { id: 'preparando', label: 'Cozinha' },
+                                        { id: 'entrega', label: 'Entrega' },
+                                        { id: 'entregue', label: 'Concluídos' }
+                                    ].map(f => (
+                                        <button
+                                            key={f.id}
+                                            onClick={() => setStatusFilter(f.id)}
+                                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${statusFilter === f.id ? 'bg-white shadow-sm text-primary' : 'text-zinc-500 hover:text-zinc-700'}`}
+                                        >
+                                            {f.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                                {filteredOrders.length === 0 ? (
+                                    <div className="col-span-full py-20 text-center space-y-4">
+                                        <div className="bg-zinc-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto text-zinc-300">
+                                            <Package className="w-10 h-10" />
                                         </div>
-
-                                        <div className="p-6 space-y-6">
-                                            {/* Client & Info */}
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="space-y-1">
-                                                    <div className="flex items-center gap-1 text-zinc-400">
-                                                        <User className="w-3 h-3" />
-                                                        <span className="text-[10px] font-black uppercase tracking-widest">Cliente</span>
-                                                    </div>
-                                                    <p className="font-bold text-zinc-900 leading-tight">{order.user_name}</p>
-                                                    <p className="text-xs text-secondary font-black">{order.user_phone}</p>
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <div className="flex items-center gap-1 text-zinc-400">
-                                                        <MapPin className="w-3 h-3" />
-                                                        <span className="text-[10px] font-black uppercase tracking-widest">Endereço</span>
-                                                    </div>
-                                                    <p className="text-xs font-medium text-zinc-600 leading-tight">
-                                                        {order.delivery_address.street}, {order.delivery_address.number}<br />
-                                                        {order.delivery_address.neighborhood}
-                                                    </p>
-                                                    {order.delivery_address.reference && (
-                                                        <p className="text-[10px] text-zinc-400 italic font-medium">Ref: {order.delivery_address.reference}</p>
-                                                    )}
-                                                    {order.delivery_address.location_link && (
-                                                        <a
-                                                            href={order.delivery_address.location_link}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="flex items-center gap-1 text-[10px] text-blue-600 font-bold uppercase mt-1 hover:underline"
-                                                        >
-                                                            <MapPin className="w-3 h-3" />
-                                                            Ver no Mapa
-                                                        </a>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Items */}
-                                            <div className="bg-zinc-50 rounded-2xl p-4 space-y-3">
-                                                <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 border-b border-zinc-100 pb-2 flex justify-between">
-                                                    Itens do Pedido
-                                                    <span>{order.order_items?.length || 0} itens</span>
-                                                </h4>
-                                                <div className="space-y-2">
-                                                    {(order.order_items || []).map((item, idx) => (
-                                                        <div key={idx} className="flex justify-between items-start gap-4 text-sm">
-                                                            <div className="flex-1">
-                                                                <span className="font-black text-primary mr-2 uppercase tracking-tighter text-xs">{item.quantity}X</span>
-                                                                <span className="font-bold text-zinc-800 block">{item.observations}</span>
-                                                                {item.product_description && (
-                                                                    <p className="text-[10px] text-zinc-500 font-medium italic mt-0.5 mb-1 leading-tight">{item.product_description}</p>
-                                                                )}
-                                                                <span className="text-[10px] font-black text-secondary px-1 bg-secondary/10 rounded uppercase">{item.size_label}</span>
-                                                            </div>
-                                                            <span className="font-bold text-zinc-500 whitespace-nowrap">R$ {(item.price * item.quantity).toFixed(2)}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-
-                                                <div className="pt-2 border-t border-zinc-100 space-y-2">
-                                                    <div className="flex justify-between items-center bg-zinc-100 p-2 rounded-lg">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-sm font-bold text-zinc-800 capitalize flex items-center gap-1">
-                                                                {order.payment_method === 'pix' && '💠 PIX'}
-                                                                {order.payment_method === 'cartao' && '💳 Cartão'}
-                                                                {order.payment_method === 'dinheiro' && '💵 Dinheiro'}
-                                                            </span>
-                                                            {order.change_for && (
-                                                                <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-bold uppercase">
-                                                                    {order.change_for}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Pagamento</span>
-                                                    </div>
-
-                                                    <div className="flex justify-between items-center text-zinc-900 pt-1">
-                                                        <span className="text-xs font-black uppercase tracking-widest">Total Geral</span>
-                                                        <span className="text-xl font-black italic text-primary tracking-tighter">R$ {order.total?.toFixed(2)}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Action Buttons */}
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                                <button
-                                                    onClick={() => updateOrderStatus(order.id, 'preparando')}
-                                                    className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1 ${order.status === 'preparando' ? 'border-blue-500 bg-blue-50 text-blue-600' : 'border-zinc-50 bg-zinc-50 text-zinc-400 hover:border-zinc-200'}`}
-                                                >
-                                                    <CheckCircle2 className="w-5 h-5" />
-                                                    <span className="text-[10px] font-black uppercase tracking-tighter">Preparo</span>
-                                                </button>
-                                                <button
-                                                    onClick={() => updateOrderStatus(order.id, 'entrega')}
-                                                    className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1 ${order.status === 'entrega' ? 'border-purple-500 bg-purple-50 text-purple-600' : 'border-zinc-50 bg-zinc-50 text-zinc-400 hover:border-zinc-200'}`}
-                                                >
-                                                    <Truck className="w-5 h-5" />
-                                                    <span className="text-[10px] font-black uppercase tracking-tighter">Entrega</span>
-                                                </button>
-                                                <button
-                                                    onClick={() => updateOrderStatus(order.id, 'entregue')}
-                                                    className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1 ${order.status === 'entregue' ? 'border-green-500 bg-green-50 text-green-600' : 'border-zinc-50 bg-zinc-50 text-zinc-400 hover:border-zinc-200'}`}
-                                                >
-                                                    <CheckCircle2 className="w-5 h-5" />
-                                                    <span className="text-[10px] font-black uppercase tracking-tighter">Finalizar</span>
-                                                </button>
-                                                <button
-                                                    onClick={() => updateOrderStatus(order.id, 'cancelado')}
-                                                    className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1 ${order.status === 'cancelado' ? 'border-red-500 bg-red-50 text-red-600' : 'border-zinc-50 bg-zinc-50 text-zinc-400 hover:border-zinc-200'}`}
-                                                >
-                                                    <XCircle className="w-5 h-5" />
-                                                    <span className="text-[10px] font-black uppercase tracking-tighter">Cancelar</span>
-                                                </button>
-                                            </div>
-                                        </div>
+                                        <h3 className="text-xl font-bold text-zinc-400 uppercase tracking-widest italic">Nenhum pedido hoje</h3>
                                     </div>
-                                ))
-                            )}
+                                ) : (
+                                    filteredOrders.map(order => (
+                                        <div
+                                            key={order.id}
+                                            className={`bg-white rounded-3xl overflow-hidden shadow-md border-2 transition-all hover:shadow-xl ${order.status === 'pendente' ? 'border-primary ring-4 ring-primary/5 animate-pulse-subtle' : 'border-zinc-100'}`}
+                                        >
+                                            <div className={`px-6 py-4 flex justify-between items-center border-b ${getStatusStyles(order.status)}`}>
+                                                <div className="flex items-center gap-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <Clock className="w-4 h-4" />
+                                                        <span className="text-xs font-black uppercase tracking-[0.2em]">PEDIDO #{order.sequential_num || '...'} • {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                    </div>
+                                                    <div className={`px-3 py-1 bg-white/50 rounded-full text-[10px] font-black uppercase tracking-widest ${getTimerColor(order.created_at, order.status)}`}>
+                                                        ⏱️ {getTimeElapsed(order.created_at)}
+                                                    </div>
+                                                </div>
+                                                <span className="text-[10px] font-black uppercase tracking-widest italic">{order.status}</span>
+                                            </div>
+
+                                            <div className="p-6 space-y-6">
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center gap-1 text-zinc-400">
+                                                            <User className="w-3 h-3" />
+                                                            <span className="text-[10px] font-black uppercase tracking-widest">Cliente</span>
+                                                        </div>
+                                                        <p className="font-bold text-zinc-900 leading-tight">{order.user_name}</p>
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="text-xs text-secondary font-black">{order.user_phone}</p>
+                                                            <div className="flex gap-1">
+                                                                <button
+                                                                    onClick={() => sendWhatsAppMessage(order.user_phone, order.user_name, 'recebido')}
+                                                                    className="p-1.5 bg-amber-100 text-amber-600 rounded-lg hover:bg-amber-200 transition-colors"
+                                                                    title="Avisar que recebeu"
+                                                                >
+                                                                    <Bell className="w-3 h-3" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => sendWhatsAppMessage(order.user_phone, order.user_name, 'forno')}
+                                                                    className="p-1.5 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors"
+                                                                    title="Avisar que está no forno"
+                                                                >
+                                                                    <MessageCircle className="w-3 h-3" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => sendWhatsAppMessage(order.user_phone, order.user_name, 'saida')}
+                                                                    className="p-1.5 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+                                                                    title="Avisar que saiu para entrega"
+                                                                >
+                                                                    <Truck className="w-3 h-3" />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center gap-1 text-zinc-400">
+                                                            <MapPin className="w-3 h-3" />
+                                                            <span className="text-[10px] font-black uppercase tracking-widest">Endereço</span>
+                                                        </div>
+                                                        <p className="text-xs font-medium text-zinc-600 leading-tight">
+                                                            {order.delivery_address.street}, {order.delivery_address.number}<br />
+                                                            {order.delivery_address.neighborhood}
+                                                        </p>
+                                                        {order.delivery_address.reference && (
+                                                            <p className="text-[10px] text-zinc-400 italic font-medium">Ref: {order.delivery_address.reference}</p>
+                                                        )}
+                                                        {order.delivery_address.location_link && (
+                                                            <a
+                                                                href={order.delivery_address.location_link}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="flex items-center gap-1 text-[10px] text-blue-600 font-bold uppercase mt-1 hover:underline"
+                                                            >
+                                                                <MapPin className="w-3 h-3" />
+                                                                Ver no Mapa
+                                                            </a>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="bg-zinc-50 rounded-2xl p-4 space-y-3">
+                                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 border-b border-zinc-100 pb-2 flex justify-between">
+                                                        Itens do Pedido
+                                                        <span>{order.order_items?.length || 0} itens</span>
+                                                    </h4>
+                                                    <div className="space-y-2">
+                                                        {(order.order_items || []).map((item, idx) => (
+                                                            <div key={idx} className="flex justify-between items-start gap-4 text-sm">
+                                                                <div className="flex-1">
+                                                                    <span className="font-black text-primary mr-2 uppercase tracking-tighter text-xs">{item.quantity}X</span>
+                                                                    <span className="font-bold text-zinc-800 block">{item.observations}</span>
+                                                                    {item.product_description && (
+                                                                        <p className="text-[10px] text-zinc-500 font-medium italic mt-0.5 mb-1 leading-tight">{item.product_description}</p>
+                                                                    )}
+                                                                    <span className="text-[10px] font-black text-secondary px-1 bg-secondary/10 rounded uppercase">{item.size_label}</span>
+                                                                </div>
+                                                                <span className="font-bold text-zinc-500 whitespace-nowrap">R$ {(item.price * item.quantity).toFixed(2)}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+
+                                                    <div className="pt-2 border-t border-zinc-100 space-y-2">
+                                                        <div className="flex justify-between items-center bg-zinc-100 p-2 rounded-lg">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-sm font-bold text-zinc-800 capitalize flex items-center gap-1">
+                                                                    {order.payment_method === 'pix' && '💠 PIX'}
+                                                                    {order.payment_method === 'cartao' && '💳 Cartão'}
+                                                                    {order.payment_method === 'dinheiro' && '💵 Dinheiro'}
+                                                                </span>
+                                                                {order.change_for && (
+                                                                    <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-bold uppercase">
+                                                                        {order.change_for}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Pagamento</span>
+                                                        </div>
+
+                                                        <div className="flex justify-between items-center text-zinc-900 pt-1">
+                                                            <span className="text-xs font-black uppercase tracking-widest">Total Geral</span>
+                                                            <span className="text-xl font-black italic text-primary tracking-tighter">R$ {order.total?.toFixed(2)}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                                    <button
+                                                        onClick={() => updateOrderStatus(order.id, 'preparando', order)}
+                                                        className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1 ${order.status === 'preparando' ? 'border-blue-500 bg-blue-50 text-blue-600' : 'border-zinc-50 bg-zinc-50 text-zinc-400 hover:border-zinc-200'}`}
+                                                    >
+                                                        <CircleCheck className="w-5 h-5" />
+                                                        <span className="text-[10px] font-black uppercase tracking-tighter">Preparo</span>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => updateOrderStatus(order.id, 'entrega', order)}
+                                                        className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1 ${order.status === 'entrega' ? 'border-purple-500 bg-purple-50 text-purple-600' : 'border-zinc-50 bg-zinc-50 text-zinc-400 hover:border-zinc-200'}`}
+                                                    >
+                                                        <Truck className="w-5 h-5" />
+                                                        <span className="text-[10px] font-black uppercase tracking-tighter">Entrega</span>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => updateOrderStatus(order.id, 'entregue', order)}
+                                                        className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1 ${order.status === 'entregue' ? 'border-green-500 bg-green-50 text-green-600' : 'border-zinc-50 bg-zinc-50 text-zinc-400 hover:border-zinc-200'}`}
+                                                    >
+                                                        <CircleCheck className="w-5 h-5" />
+                                                        <span className="text-[10px] font-black uppercase tracking-tighter">Finalizar</span>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => updateOrderStatus(order.id, 'cancelado', order)}
+                                                        className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all gap-1 ${order.status === 'cancelado' ? 'border-red-500 bg-red-50 text-red-600' : 'border-zinc-50 bg-zinc-50 text-zinc-400 hover:border-zinc-200'}`}
+                                                    >
+                                                        <CircleX className="w-5 h-5" />
+                                                        <span className="text-[10px] font-black uppercase tracking-tighter">Cancelar</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
                         </div>
                     ) : view === 'products' ? (
                         categories.map(category => (
@@ -477,7 +708,7 @@ export default function AdminDashboard() {
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                     {products.filter(p => p.category_id === category.id).map(product => (
                                         <div key={product.id} className="bg-white border border-zinc-100 rounded-2xl p-4 flex items-center gap-4 hover:shadow-lg transition-all">
-                                            <div className="w-16 h-16 bg-zinc-50 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0 border border-zinc-100">
+                                            <div className="w-16 h-16 bg-zinc-50 rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-zinc-100">
                                                 {product.image_url ? (
                                                     <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                                                 ) : (
@@ -570,6 +801,163 @@ export default function AdminDashboard() {
                                 ))}
                             </div>
                         </div>
+                    ) : view === 'pix' ? (
+                        <div className="max-w-2xl mx-auto space-y-6">
+                            {pixSettings && (
+                                <>
+                                    {/* QR Code Section */}
+                                    <div className="bg-white border border-zinc-100 rounded-3xl p-8 space-y-6">
+                                        <div className="flex items-center gap-3 pb-4 border-b border-zinc-100">
+                                            <div className="bg-primary/10 p-3 rounded-xl">
+                                                <QrCode className="w-6 h-6 text-primary" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-xl font-black uppercase italic tracking-tighter text-zinc-900">QR Code PIX</h3>
+                                                <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">Imagem que o cliente vai escanear</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-col items-center gap-6">
+                                            {pixSettings.qr_code_url ? (
+                                                <div className="relative group">
+                                                    <img
+                                                        src={pixSettings.qr_code_url}
+                                                        alt="QR Code PIX"
+                                                        className="w-64 h-64 object-contain border-4 border-zinc-100 rounded-2xl bg-white shadow-lg"
+                                                    />
+                                                    <button
+                                                        onClick={() => setPixSettings({ ...pixSettings, qr_code_url: '' })}
+                                                        className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="w-64 h-64 border-4 border-dashed border-zinc-200 rounded-2xl flex items-center justify-center bg-zinc-50">
+                                                    <div className="text-center space-y-2">
+                                                        <QrCode className="w-16 h-16 text-zinc-300 mx-auto" />
+                                                        <p className="text-sm text-zinc-400 font-bold">Nenhum QR Code</p>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <label className="cursor-pointer">
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={handleQrCodeUpload}
+                                                    className="hidden"
+                                                />
+                                                <div className="flex items-center gap-2 bg-blue-50 text-blue-600 px-6 py-3 rounded-xl font-bold hover:bg-blue-100 transition-colors shadow-sm">
+                                                    <Upload className="w-5 h-5" />
+                                                    {pixSettings.qr_code_url ? 'Trocar QR Code' : 'Fazer Upload do QR Code'}
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    {/* PIX Details Section */}
+                                    <div className="bg-white border border-zinc-100 rounded-3xl p-8 space-y-6">
+                                        <div className="flex items-center gap-3 pb-4 border-b border-zinc-100">
+                                            <div className="bg-secondary/10 p-3 rounded-xl">
+                                                <DollarSign className="w-6 h-6 text-secondary" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-xl font-black uppercase italic tracking-tighter text-zinc-900">Detalhes do PIX</h3>
+                                                <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">Informações para transferência</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest ml-1">Tipo de Chave</label>
+                                                <select
+                                                    value={pixSettings.key_type}
+                                                    onChange={(e) => setPixSettings({ ...pixSettings, key_type: e.target.value })}
+                                                    className="w-full bg-zinc-50 border-2 border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary transition-all font-bold text-zinc-700"
+                                                >
+                                                    <option value="cpf">CPF</option>
+                                                    <option value="cnpj">CNPJ</option>
+                                                    <option value="email">E-mail</option>
+                                                    <option value="phone">Telefone</option>
+                                                    <option value="random">Chave Aleatória</option>
+                                                </select>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest ml-1">Chave PIX</label>
+                                                <input
+                                                    type="text"
+                                                    value={pixSettings.pix_key}
+                                                    onChange={(e) => setPixSettings({ ...pixSettings, pix_key: e.target.value })}
+                                                    placeholder="Sua chave..."
+                                                    className="w-full bg-zinc-50 border-2 border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary transition-all font-bold text-zinc-700"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest ml-1">Nome do Titular</label>
+                                                <input
+                                                    type="text"
+                                                    value={pixSettings.holder_name}
+                                                    onChange={(e) => setPixSettings({ ...pixSettings, holder_name: e.target.value })}
+                                                    placeholder="Nome completo..."
+                                                    className="w-full bg-zinc-50 border-2 border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary transition-all font-bold text-zinc-700"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest ml-1">Banco</label>
+                                                <input
+                                                    type="text"
+                                                    value={pixSettings.bank_name}
+                                                    onChange={(e) => setPixSettings({ ...pixSettings, bank_name: e.target.value })}
+                                                    placeholder="Ex: Nubank, Inter..."
+                                                    className="w-full bg-zinc-50 border-2 border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary transition-all font-bold text-zinc-700"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-between bg-zinc-50 p-4 rounded-xl">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-3 h-3 rounded-full ${pixSettings.is_active ? 'bg-green-500' : 'bg-red-500'}`} />
+                                                <span className="text-sm font-bold text-zinc-700">
+                                                    PIX está {pixSettings.is_active ? 'ATIVO' : 'DESATIVADO'} no checkout
+                                                </span>
+                                            </div>
+                                            <button
+                                                onClick={() => setPixSettings({ ...pixSettings, is_active: !pixSettings.is_active })}
+                                                className={`px-4 py-2 rounded-lg font-black text-xs uppercase tracking-wider transition-colors ${pixSettings.is_active
+                                                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                                    : 'bg-red-100 text-red-700 hover:bg-red-200'
+                                                    }`}
+                                            >
+                                                {pixSettings.is_active ? 'Desativar' : 'Ativar'}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Save Button */}
+                                    <button
+                                        onClick={updatePixSettings}
+                                        disabled={savingPix}
+                                        className={`w-full py-5 rounded-2xl font-black text-lg uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl transition-all ${savingPix
+                                            ? 'bg-zinc-400 cursor-not-allowed'
+                                            : 'bg-primary text-white hover:bg-red-900 active:scale-95 shadow-primary/20'
+                                            }`}
+                                    >
+                                        {savingPix ? (
+                                            <>
+                                                <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-white"></div>
+                                                Salvando...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Save className="w-6 h-6" />
+                                                Salvar Configurações PIX
+                                            </>
+                                        )}
+                                    </button>
+                                </>
+                            )}
+                        </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {categories.map(category => (
@@ -605,7 +993,14 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Mobile Navigation */}
-                <div className="md:hidden fixed bottom-0 left-0 right-0 bg-zinc-900 border-t-2 border-secondary flex justify-around p-2 z-[100] safe-bottom">
+                <div className="md:hidden fixed bottom-0 left-0 right-0 bg-zinc-900 border-t-2 border-secondary flex justify-around p-2 z-100 safe-bottom">
+                    <button
+                        onClick={() => setView('stats')}
+                        className={`flex flex-col items-center gap-1 p-2 transition-all ${view === 'stats' ? 'text-secondary scale-110' : 'text-zinc-500'}`}
+                    >
+                        <TrendingUp className="w-6 h-6" />
+                        <span className="text-[10px] font-black uppercase tracking-tighter">Stats</span>
+                    </button>
                     <button
                         onClick={() => setView('orders')}
                         className={`flex flex-col items-center gap-1 p-2 transition-all ${view === 'orders' ? 'text-secondary scale-110' : 'text-zinc-500'}`}
@@ -633,6 +1028,13 @@ export default function AdminDashboard() {
                     >
                         <CheckCircle2 className="w-6 h-6" />
                         <span className="text-[10px] font-black uppercase tracking-tighter">Sabores</span>
+                    </button>
+                    <button
+                        onClick={() => setView('pix')}
+                        className={`flex flex-col items-center gap-1 p-2 transition-all ${view === 'pix' ? 'text-secondary scale-110' : 'text-zinc-500'}`}
+                    >
+                        <QrCode className="w-6 h-6" />
+                        <span className="text-[10px] font-black uppercase tracking-tighter">PIX</span>
                     </button>
                     <button
                         onClick={() => setView('categories')}
@@ -667,15 +1069,21 @@ export default function AdminDashboard() {
                     />
                 )}
 
-                <PixSettingsModal
-                    isOpen={pixModalOpen}
-                    onClose={() => setPixModalOpen(false)}
-                />
+                {/* redundant - removing pix modal usage for now as we have full page view 
+                {pixModalOpen && (
+                    <PixSettingsModal
+                        isOpen={pixModalOpen}
+                        onClose={() => setPixModalOpen(false)}
+                    />
+                )}
+                */}
 
-                <BusinessHoursModal
-                    isOpen={businessHoursModalOpen}
-                    onClose={() => setBusinessHoursModalOpen(false)}
-                />
+                {businessHoursModalOpen && (
+                    <BusinessHoursModal
+                        isOpen={businessHoursModalOpen}
+                        onClose={() => setBusinessHoursModalOpen(false)}
+                    />
+                )}
             </main>
         </div>
     )

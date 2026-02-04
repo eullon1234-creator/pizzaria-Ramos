@@ -11,10 +11,10 @@ export default function FloatingCart() {
         <AnimatePresence>
             {itemCount > 0 && (
                 <motion.div
-                    initial={{ y: 100, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: 100, opacity: 0 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                    initial={{ opacity: 0, y: 50, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 50, scale: 0.9 }}
+                    transition={{ type: 'spring', damping: 25 }}
                     className="fixed bottom-4 left-4 right-4 z-40 md:left-auto md:right-8 md:bottom-8 md:w-96"
                 >
                     <button
@@ -41,17 +41,6 @@ export default function FloatingCart() {
                             <ChevronRight className="w-4 h-4" />
                         </div>
                     </button>
-
-                    {/* Helper Tooltip for first item */}
-                    {itemCount === 1 && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="absolute -top-12 left-1/2 -translate-x-1/2 bg-secondary text-primary px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap shadow-lg arrow-down"
-                        >
-                            Seu item foi adicionado! 👇
-                        </motion.div>
-                    )}
                 </motion.div>
             )}
         </AnimatePresence>
