@@ -1,28 +1,32 @@
-import React from 'react'
+import React, { Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Header from './components/Header'
 import CartDrawer from './components/CartDrawer'
 import FloatingCart from './components/FloatingCart'
 import PWAPrompt from './components/PWAPrompt'
+import LoadingSpinner from './components/LoadingSpinner'
 import { CartProvider } from './context/CartContext'
-import Store from './pages/Store'
-import AdminLogin from './pages/AdminLogin'
-import AdminDashboard from './pages/AdminDashboard'
+
+// Lazy Loading (Code Splitting)
+const Store = lazy(() => import('./pages/Store'))
+const AdminLogin = lazy(() => import('./pages/AdminLogin'))
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
 
 function App() {
   return (
     <CartProvider>
       <BrowserRouter>
         <div className="min-h-screen bg-zinc-50 flex flex-col">
-          <Routes>
-            {/* Public Store Layout */}
-            <Route path="/" element={
-              <>
-                <Header />
-                <main className="flex-1">
-                  <Store />
-                </main>
-                <footer className="bg-zinc-900 text-white py-12 border-t border-zinc-800">
+          <Suspense fallback={<LoadingSpinner />}>
+            <Routes>
+              {/* Public Store Layout */}
+              <Route path="/" element={
+                <>
+                  <Header />
+                  <main className="flex-1">
+                    <Store />
+                  </main>
+                  <footer className="bg-zinc-900 text-white py-12 border-t border-zinc-800">
                   <div className="container mx-auto px-4 text-center md:text-left">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
                       <div>
@@ -59,6 +63,7 @@ function App() {
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </Suspense>
           
           {/* PWA Prompts */}
           <PWAPrompt />
