@@ -166,14 +166,20 @@ export default function Checkout({ isOpen, onClose }) {
 
     const fetchPixSettings = async () => {
         try {
-            const { data } = await supabase
+            console.log('Buscando configurações PIX...')
+            const { data, error } = await supabase
                 .from('store_settings')
                 .select('*')
                 .eq('key', 'pix_config')
                 .single()
 
+            console.log('PIX Config Response:', { data, error })
+            
             if (data && data.value) {
+                console.log('PIX Settings loaded:', data.value)
                 setPixSettings(data.value)
+            } else {
+                console.warn('PIX settings não encontrado ou vazio')
             }
         } catch (error) {
             console.error('Error fetching PIX settings:', error)
@@ -430,28 +436,45 @@ export default function Checkout({ isOpen, onClose }) {
             console.log('PIX Settings:', pixSettings)
             
             if (formData.paymentMethod === 'pix') {
-                if (!pixSettings) {
+                if (!pixSettings || !pixSettings.pix_key) {
                     alert('Configure as informações de PIX no painel admin antes de usar esta forma de pagamento.')
+                    setIsSaving(false)
                     return
                 }
                 
                 try {
+                    console.log('Gerando QR Code PIX com dados:', {
+                        pixKey: pixSettings.pix_key,
+                        keyType: pixSettings.key_type,
+                        holderName: pixSettings.holder_name,
+                        city: pixSettings.city,
+                        amount: cartTotal,
+                        transactionId: orderId
+                    })
+                    
                     const { payload, qrCodeDataUrl } = await generateDynamicPixQRCode({
                         pixKey: pixSettings.pix_key,
                         keyType: pixSettings.key_type || 'random',
-                        holderName: pixSettings.holder_name,
+                        holderName: pixSettings.holder_name || 'PIZZARIA RAMOS',
                         city: pixSettings.city || 'Teresina',
                         amount: cartTotal,
                         transactionId: orderId
                     })
                     
                     console.log('QR Code gerado com sucesso!')
+                    console.log('Payload:', payload)
+                    console.log('Setting showPaymentPending to true')
+                    
                     setPixPayload(payload)
                     setPixQRCode(qrCodeDataUrl)
                     setShowPaymentPending(true)
+                    setIsSaving(false)
+                    return // Importante: parar aqui para mostrar tela de pagamento
                 } catch (error) {
                     console.error('Erro ao gerar QR Code PIX:', error)
                     alert('Erro ao gerar QR Code. Tente novamente.')
+                    setIsSaving(false)
+                    return
                 }
             } else {
                 // 4. Se for dinheiro/cartão, enviar direto para WhatsApp
