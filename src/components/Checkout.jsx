@@ -100,12 +100,7 @@ export default function Checkout({ isOpen, onClose }) {
 
     useEffect(() => {
         if (isOpen) {
-            fetchPixSettings()
-            fetchBusinessHours()
-            loadSavedData()
-            setErrors({}) // Clear errors when opening
-        } else {
-            // Reset states when modal re-opens
+            // Reset all states when opening
             setOrderSuccess(false)
             setShowPaymentPending(false)
             setPaymentConfirmed(false)
@@ -114,6 +109,12 @@ export default function Checkout({ isOpen, onClose }) {
             setCopiedPayload(false)
             setPixQRCode(null)
             setPixPayload(null)
+            setErrors({})
+            
+            // Fetch settings
+            fetchPixSettings()
+            fetchBusinessHours()
+            loadSavedData()
         }
     }, [isOpen])
 
@@ -342,9 +343,15 @@ export default function Checkout({ isOpen, onClose }) {
     }
 
     const handleSendOrder = async (e) => {
-        e.preventDefault()
+        if (e && e.preventDefault) {
+            e.preventDefault()
+        }
+
+        console.log('=== INICIANDO handleSendOrder ===')
+        console.log('Payment Method:', formData.paymentMethod)
 
         if (!validateForm()) {
+            console.log('Validação falhou!')
             return
         }
 
@@ -379,6 +386,9 @@ export default function Checkout({ isOpen, onClose }) {
         try {
             const orderId = generateOrderId()
             setCurrentOrderId(orderId)
+            
+            console.log('Order ID gerado:', orderId)
+            console.log('Salvando pedido no Supabase...')
 
             // 1. Save order to Supabase
             const { error: orderError } = await supabase
@@ -430,8 +440,11 @@ export default function Checkout({ isOpen, onClose }) {
                 .insert(orderItems)
 
             if (itemsError) throw itemsError
+            
+            console.log('✅ Pedido e itens salvos no Supabase!')
 
             // 3. Se for PIX, gerar QR Code e aguardar pagamento
+            console.log('=== VERIFICANDO FORMA DE PAGAMENTO ===')
             console.log('Payment Method:', formData.paymentMethod)
             console.log('PIX Settings:', pixSettings)
             
@@ -463,11 +476,20 @@ export default function Checkout({ isOpen, onClose }) {
                     
                     console.log('QR Code gerado com sucesso!')
                     console.log('Payload:', payload)
-                    console.log('Setting showPaymentPending to true')
+                    console.log('QR Code URL length:', qrCodeDataUrl.length)
                     
                     setPixPayload(payload)
                     setPixQRCode(qrCodeDataUrl)
+                    
+                    console.log('>>> ANTES de setShowPaymentPending(true)')
                     setShowPaymentPending(true)
+                    console.log('>>> DEPOIS de setShowPaymentPending(true)')
+                    
+                    // Debug: verificar estado após um breve delay
+                    setTimeout(() => {
+                        console.log('Estado após 100ms - showPaymentPending deveria ser true')
+                    }, 100)
+                    
                     setIsSaving(false)
                     return // Importante: parar aqui para mostrar tela de pagamento
                 } catch (error) {
@@ -561,8 +583,14 @@ export default function Checkout({ isOpen, onClose }) {
                         aria-labelledby="checkout-title"
                     >
                         {(() => {
-                            console.log('Render State - showPaymentPending:', showPaymentPending, 'orderSuccess:', orderSuccess)
+                            console.log('=== RENDER CHECKOUT ===')
+                            console.log('showPaymentPending:', showPaymentPending)
+                            console.log('orderSuccess:', orderSuccess)
+                            console.log('pixQRCode:', pixQRCode ? 'exists' : 'null')
+                            console.log('pixPayload:', pixPayload ? 'exists' : 'null')
+                            
                             if (showPaymentPending) {
+                                console.log('>>> Renderizando PAYMENT PENDING screen')
                                 return (
                             <div className="p-8 flex flex-col items-center justify-center text-center h-full space-y-6 scrollbar-hide overflow-y-auto">
                                 <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 mb-2 animate-pulse">
@@ -1096,6 +1124,7 @@ export default function Checkout({ isOpen, onClose }) {
                                         <span className="text-2xl font-black italic tracking-tighter text-primary">R$ {cartTotal.toFixed(2)}</span>
                                     </div>
                                     <button
+                                        type="button"
                                         onClick={handleSendOrder}
                                         disabled={isSaving}
                                         className={`flex-1 h-14 bg-primary text-white rounded-2xl font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-primary/20 flex items-center justify-center gap-3 ${isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:bg-red-900 group'}`}
