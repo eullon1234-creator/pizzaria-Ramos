@@ -133,7 +133,13 @@ export default function Menu() {
                         const minPrice = prices.length > 0 ? Math.min(...prices) : 0
 
                         return (
-                            <div key={product.id} className="group bg-white rounded-2xl overflow-hidden shadow-md border border-zinc-100 hover:shadow-xl transition-all hover:-translate-y-1">
+                            <motion.div 
+                                key={product.id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className="group bg-white rounded-2xl overflow-hidden shadow-md border border-zinc-100 hover:shadow-xl transition-all hover:-translate-y-1"
+                            >
                                 <div className="relative h-48 overflow-hidden bg-zinc-100">
                                     {product.image_url ? (
                                         <img 
@@ -159,19 +165,26 @@ export default function Menu() {
                                     <p className="text-zinc-600 text-sm mb-6 line-clamp-2">{product.description}</p>
 
                                     <div className="flex items-center justify-between mt-auto">
-                                        <button className="text-zinc-400 hover:text-primary transition-colors">
+                                           <button 
+                                            onClick={() => {
+                                                alert(`${product.name}\n\n${product.description}\n\nPreço: R$ ${minPrice.toFixed(2)}${product.product_prices.length > 1 ? ' ou mais' : ''}`)
+                                            }}
+                                            className="text-zinc-400 hover:text-primary transition-colors"
+                                            aria-label={`Ver informações de ${product.name}`}
+                                        >
                                             <Info className="w-5 h-5" />
                                         </button>
-                                        <button
+                                <button
                                             onClick={() => handleOrderClick(product)}
                                             className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg font-bold hover:bg-red-900 transition-colors shadow-md active:scale-95"
+                                            aria-label={`Adicionar ${product.name} ao carrinho`}
                                         >
                                             <Plus className="w-5 h-5" />
                                             Adicionar
                                         </button>
                                     </div>
                                 </div>
-                            </div>
+                            </motion.div>
                         )
                     })}
                 </div>

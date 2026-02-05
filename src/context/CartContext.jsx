@@ -5,6 +5,12 @@ const CartContext = createContext()
 export function CartProvider({ children }) {
     const [cart, setCart] = useState([])
     const [isCartOpen, setIsCartOpen] = useState(false)
+    const [notification, setNotification] = useState(null)
+
+    const showNotification = (message) => {
+        setNotification(message)
+        setTimeout(() => setNotification(null), 2500)
+    }
 
     const addToCart = (product, variation, quantity = 1) => {
         setCart(prev => {
@@ -13,6 +19,7 @@ export function CartProvider({ children }) {
             )
 
             if (existing) {
+                showNotification(`${product.name} atualizado no carrinho! 🎉`)
                 return prev.map(item =>
                     item.id === product.id && item.variation.id === variation.id
                         ? { ...item, quantity: item.quantity + quantity }
@@ -20,9 +27,9 @@ export function CartProvider({ children }) {
                 )
             }
 
+            showNotification(`${product.name} adicionado ao carrinho! 🍕`)
             return [...prev, { ...product, variation, quantity }]
         })
-        // Removed auto-open: setIsCartOpen(true)
     }
 
     const removeFromCart = (productId, variationId) => {
@@ -57,7 +64,8 @@ export function CartProvider({ children }) {
             cartTotal,
             cartCount,
             isCartOpen,
-            setIsCartOpen
+            setIsCartOpen,
+            notification
         }}>
             {children}
         </CartContext.Provider>

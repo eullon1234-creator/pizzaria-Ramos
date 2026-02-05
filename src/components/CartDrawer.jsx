@@ -40,7 +40,7 @@ export default function CartDrawer() {
                                 </button>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar">
+                            <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide">
                                 {cart.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center h-full text-zinc-400 space-y-4">
                                         <ShoppingBag className="w-16 h-16 stroke-1 italic" />

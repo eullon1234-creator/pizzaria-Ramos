@@ -19,7 +19,8 @@ export default function FloatingCart() {
                 >
                     <button
                         onClick={() => setIsCartOpen(true)}
-                        className="w-full bg-zinc-900 text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between border-2 border-zinc-800 group hover:border-secondary transition-colors"
+                        className="w-full bg-zinc-900 text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between border-2 border-zinc-800 group hover:border-secondary transition-colors active:scale-95"
+                        aria-label={`Ver carrinho com ${itemCount} ${itemCount === 1 ? 'item' : 'itens'}`}
                     >
                         <div className="flex items-center gap-4">
                             <div className="relative">
