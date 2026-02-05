@@ -167,28 +167,19 @@ export default function Checkout({ isOpen, onClose }) {
 
     const fetchPixSettings = async () => {
         try {
-            console.log('Buscando configurações PIX...')
             const { data, error } = await supabase
                 .from('store_settings')
                 .select('*')
                 .eq('key', 'pix_config')
                 .single()
-
-            console.log('PIX Config Response:', { data, error })
             
             if (error) {
-                console.error('❌ ERRO ao buscar PIX config:', error)
-                if (error.code === 'PGRST116' || error.message.includes('0 rows')) {
-                    console.error('⚠️ Tabela store_settings não tem dados! Execute o SQL de setup.')
-                }
+                console.error('Erro ao buscar PIX config:', error.message)
                 return
             }
             
             if (data && data.value) {
-                console.log('✅ PIX Settings loaded:', data.value)
                 setPixSettings(data.value)
-            } else {
-                console.warn('⚠️ PIX settings não encontrado ou vazio')
             }
         } catch (error) {
             console.error('❌ Exceção ao buscar PIX settings:', error)
@@ -355,11 +346,7 @@ export default function Checkout({ isOpen, onClose }) {
             e.preventDefault()
         }
 
-        console.log('=== INICIANDO handleSendOrder ===')
-        console.log('Payment Method:', formData.paymentMethod)
-
         if (!validateForm()) {
-            console.log('Validação falhou!')
             return
         }
 
@@ -394,9 +381,6 @@ export default function Checkout({ isOpen, onClose }) {
         try {
             const orderId = generateOrderId()
             setCurrentOrderId(orderId)
-            
-            console.log('Order ID gerado:', orderId)
-            console.log('Salvando pedido no Supabase...')
 
             // 1. Save order to Supabase
             const { error: orderError } = await supabase
@@ -448,13 +432,8 @@ export default function Checkout({ isOpen, onClose }) {
                 .insert(orderItems)
 
             if (itemsError) throw itemsError
-            
-            console.log('✅ Pedido e itens salvos no Supabase!')
 
             // 3. Se for PIX, gerar QR Code e aguardar pagamento
-            console.log('=== VERIFICANDO FORMA DE PAGAMENTO ===')
-            console.log('Payment Method:', formData.paymentMethod)
-            console.log('PIX Settings:', pixSettings)
             
             if (formData.paymentMethod === 'pix') {
                 if (!pixSettings || !pixSettings.pix_key) {
@@ -471,15 +450,6 @@ export default function Checkout({ isOpen, onClose }) {
                 }
                 
                 try {
-                    console.log('Gerando QR Code PIX com dados:', {
-                        pixKey: pixSettings.pix_key,
-                        keyType: pixSettings.key_type,
-                        holderName: pixSettings.holder_name,
-                        city: pixSettings.city,
-                        amount: cartTotal,
-                        transactionId: orderId
-                    })
-                    
                     const { payload, qrCodeDataUrl } = await generateDynamicPixQRCode({
                         pixKey: pixSettings.pix_key,
                         keyType: pixSettings.key_type || 'random',
@@ -489,21 +459,9 @@ export default function Checkout({ isOpen, onClose }) {
                         transactionId: orderId
                     })
                     
-                    console.log('QR Code gerado com sucesso!')
-                    console.log('Payload:', payload)
-                    console.log('QR Code URL length:', qrCodeDataUrl.length)
-                    
                     setPixPayload(payload)
                     setPixQRCode(qrCodeDataUrl)
-                    
-                    console.log('>>> ANTES de setShowPaymentPending(true)')
                     setShowPaymentPending(true)
-                    console.log('>>> DEPOIS de setShowPaymentPending(true)')
-                    
-                    // Debug: verificar estado após um breve delay
-                    setTimeout(() => {
-                        console.log('Estado após 100ms - showPaymentPending deveria ser true')
-                    }, 100)
                     
                     setIsSaving(false)
                     return // Importante: parar aqui para mostrar tela de pagamento
@@ -598,14 +556,7 @@ export default function Checkout({ isOpen, onClose }) {
                         aria-labelledby="checkout-title"
                     >
                         {(() => {
-                            console.log('=== RENDER CHECKOUT ===')
-                            console.log('showPaymentPending:', showPaymentPending)
-                            console.log('orderSuccess:', orderSuccess)
-                            console.log('pixQRCode:', pixQRCode ? 'exists' : 'null')
-                            console.log('pixPayload:', pixPayload ? 'exists' : 'null')
-                            
                             if (showPaymentPending) {
-                                console.log('>>> Renderizando PAYMENT PENDING screen')
                                 return (
                             <div className="p-8 flex flex-col items-center justify-center text-center h-full space-y-6 scrollbar-hide overflow-y-auto">
                                 <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 mb-2 animate-pulse">

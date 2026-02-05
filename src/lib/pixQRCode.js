@@ -4,7 +4,7 @@ import QRCode from 'qrcode'
  * Gera um campo EMV no formato ID+TAMANHO+VALOR
  */
 function generateEMVField(id, value) {
-    if (!value) return ''
+    if (!value && value !== '') return ''
     const size = value.length.toString().padStart(2, '0')
     return `${id}${size}${value}`
 }
@@ -31,18 +31,45 @@ function calculateCRC16(payload) {
 }
 
 /**
- * Remove formatação de chaves PIX (CPF/CNPJ/telefone)
+ * Remove formatação e normaliza chaves PIX conforme o padrão BRCode.
+ * - CPF/CNPJ: somente dígitos
+ * - Telefone: +55 + somente dígitos (padrão PIX exige código do país)
+ * - Email: mantém como está
+ * - Aleatória: mantém como está
  */
 function cleanPixKey(key, keyType) {
-    if (keyType === 'cpf' || keyType === 'cnpj' || keyType === 'phone') {
+    if (keyType === 'cpf' || keyType === 'cnpj') {
         return key.replace(/\D/g, '')
+    }
+    if (keyType === 'phone') {
+        const digits = key.replace(/\D/g, '')
+        // Se já começa com 55 e tem 13 dígitos, retorna com +
+        if (digits.startsWith('55') && digits.length >= 13) {
+            return '+' + digits
+        }
+        // Senão, adiciona prefixo +55
+        return '+55' + digits
     }
     return key
 }
 
 /**
+ * Remove acentos e caracteres especiais do texto.
+ * O padrão EMV/BRCode aceita apenas ASCII básico.
+ */
+function normalizeText(text) {
+    return text
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9 ]/g, '')
+        .toUpperCase()
+}
+
+/**
  * Gera o payload PIX (Copia e Cola) com valor dinâmico
  * Baseado no padrão EMV/BRCode do Banco Central
+ * 
+ * Referência: https://www.bcb.gov.br/content/estabilidadefinanceira/forumpireunioes/AnexoI-PadsroesparaIniciacaodoPix.pdf
  * 
  * @param {Object} pixData - Dados do PIX
  * @param {string} pixData.pixKey - Chave PIX (CPF, CNPJ, Email, Telefone ou Aleatória)
@@ -50,7 +77,7 @@ function cleanPixKey(key, keyType) {
  * @param {string} pixData.holderName - Nome do titular da conta
  * @param {string} pixData.city - Cidade do recebedor
  * @param {number} pixData.amount - Valor da transação em reais
- * @param {string} [pixData.transactionId] - ID único da transação (opcional)
+ * @param {string} [pixData.transactionId] - ID único da transação (opcional, default "***")
  * @returns {string} Payload PIX (código Copia e Cola)
  */
 export function generatePixPayload(pixData) {
@@ -59,24 +86,31 @@ export function generatePixPayload(pixData) {
     // Limpar a chave PIX removendo formatação
     const cleanKey = cleanPixKey(pixKey, keyType)
     
-    // 00 - Payload Format Indicator
+    // 00 - Payload Format Indicator (obrigatório)
     let payload = generateEMVField('00', '01')
     
-    // 26 - Merchant Account Information
+    // 01 - Point of Initiation Method
+    // "11" = QR estático (sem valor definido), "12" = QR dinâmico (com valor)
+    if (amount && amount > 0) {
+        payload += generateEMVField('01', '12')
+    } else {
+        payload += generateEMVField('01', '11')
+    }
+    
+    // 26 - Merchant Account Information (PIX)
+    // Subcampo 00: GUI do arranjo de pagamento (BR.GOV.BCB.PIX)
+    // Subcampo 01: Chave PIX
     let merchantAccount = generateEMVField('00', 'BR.GOV.BCB.PIX')
     merchantAccount += generateEMVField('01', cleanKey)
-    if (transactionId) {
-        merchantAccount += generateEMVField('02', transactionId.substring(0, 25))
-    }
     payload += generateEMVField('26', merchantAccount)
     
-    // 52 - Merchant Category Code (comércio varejista)
+    // 52 - Merchant Category Code (0000 = não informado)
     payload += generateEMVField('52', '0000')
     
     // 53 - Transaction Currency (986 = BRL)
     payload += generateEMVField('53', '986')
     
-    // 54 - Transaction Amount
+    // 54 - Transaction Amount (valor da transação)
     if (amount && amount > 0) {
         payload += generateEMVField('54', amount.toFixed(2))
     }
@@ -84,19 +118,19 @@ export function generatePixPayload(pixData) {
     // 58 - Country Code
     payload += generateEMVField('58', 'BR')
     
-    // 59 - Merchant Name (máximo 25 caracteres)
-    const merchantName = holderName.substring(0, 25)
+    // 59 - Merchant Name (máximo 25 caracteres, sem acentos)
+    const merchantName = normalizeText(holderName).substring(0, 25)
     payload += generateEMVField('59', merchantName)
     
-    // 60 - Merchant City (máximo 15 caracteres)
-    const merchantCity = city.substring(0, 15)
+    // 60 - Merchant City (máximo 15 caracteres, sem acentos)
+    const merchantCity = normalizeText(city).substring(0, 15)
     payload += generateEMVField('60', merchantCity)
     
-    // 62 - Additional Data Field Template (opcional)
-    if (transactionId) {
-        let additionalData = generateEMVField('05', transactionId.substring(0, 25))
-        payload += generateEMVField('62', additionalData)
-    }
+    // 62 - Additional Data Field Template (obrigatório no PIX)
+    // Subcampo 05: Reference Label (TXID) — "***" se não informado
+    const txid = transactionId ? transactionId.substring(0, 25) : '***'
+    const additionalData = generateEMVField('05', txid)
+    payload += generateEMVField('62', additionalData)
     
     // 63 - CRC16 (calculado sobre todo o payload + "6304")
     payload += '6304'
