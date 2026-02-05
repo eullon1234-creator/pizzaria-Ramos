@@ -10,6 +10,9 @@ export default function Checkout({ isOpen, onClose }) {
     const [isSaving, setIsSaving] = useState(false)
     const [isLoadingLocation, setIsLoadingLocation] = useState(false)
     const [orderSuccess, setOrderSuccess] = useState(false)
+    const [showPaymentPending, setShowPaymentPending] = useState(false)
+    const [paymentConfirmed, setPaymentConfirmed] = useState(false)
+    const [currentOrderId, setCurrentOrderId] = useState(null)
     const [pixSettings, setPixSettings] = useState(null)
     const [pixQRCode, setPixQRCode] = useState(null)
     const [pixPayload, setPixPayload] = useState(null)
@@ -104,6 +107,9 @@ export default function Checkout({ isOpen, onClose }) {
         } else {
             // Reset states when modal re-opens
             setOrderSuccess(false)
+            setShowPaymentPending(false)
+            setPaymentConfirmed(false)
+            setCurrentOrderId(null)
             setCopied(false)
             setCopiedPayload(false)
             setPixQRCode(null)
@@ -366,6 +372,7 @@ export default function Checkout({ isOpen, onClose }) {
 
         try {
             const orderId = generateOrderId()
+            setCurrentOrderId(orderId)
 
             // 1. Save order to Supabase
             const { error: orderError } = await supabase
@@ -418,39 +425,7 @@ export default function Checkout({ isOpen, onClose }) {
 
             if (itemsError) throw itemsError
 
-            // 3. Prepare WhatsApp message
-            let message = `*🍕 NOVO PEDIDO - PIZZARIA RAMOS*\n\n`
-            message += `*PEDIDO:* #${orderId}\n`
-            message += `*👤 CLIENTE:* ${formData.nome}\n`
-            message += `*📱 WHATSAPP:* ${formData.whatsapp}\n\n`
-
-            message += `*📍 ENDEREÇO DE ENTREGA:*\n`
-            message += `${formData.endereco}, ${formData.numero}\n`
-            message += `Bairro: ${formData.bairro}\n`
-            if (formData.pontoReferencia) message += `Ref: ${formData.pontoReferencia}\n`
-            if (formData.locationLink) message += `🗺️ *Localização:* ${formData.locationLink}\n`
-            message += `\n`
-
-            message += `*🕒 ENTREGA:* ${formData.tipoEntrega === 'imediata' ? 'Imediata (45min - 1h30min)' : `Agendada para ${formData.horarioAgendado}`}\n\n`
-
-            message += `*🛒 ITENS DO PEDIDO:*\n`
-            message += cart.map(item => `• ${item.quantity}x ${item.name} (${item.variation.size}) - R$ ${(item.variation.price * item.quantity).toFixed(2)}`).join('\n')
-
-            message += `\n\n*💵 PAGAMENTO:*\n`
-            message += `Forma: ${formData.paymentMethod === 'pix' ? 'PIX' : formData.paymentMethod === 'dinheiro' ? 'Dinheiro' : 'Cartão'}\n`
-            if (formData.paymentMethod === 'dinheiro') {
-                message += `Troco: ${formData.needChange ? `Para R$ ${formData.changeFor}` : 'Não precisa'}\n`
-            }
-
-            message += `\n*RESUMO FINANCEIRO:*\n`
-            message += `Subtotal: R$ ${cartTotal.toFixed(2)}\n`
-            message += `Entrega: Grátis\n`
-            message += `*TOTAL: R$ ${cartTotal.toFixed(2)}*`
-
-            const encoded = encodeURIComponent(message)
-            window.open(`https://wa.me/${PIZZARIA_WHATSAPP}?text=${encoded}`, '_blank')
-
-            // 4. Gerar QR Code PIX dinâmico (se pagamento for PIX)
+            // 3. Se for PIX, gerar QR Code e aguardar pagamento
             if (formData.paymentMethod === 'pix' && pixSettings) {
                 try {
                     const { payload, qrCodeDataUrl } = await generateDynamicPixQRCode({
@@ -464,19 +439,61 @@ export default function Checkout({ isOpen, onClose }) {
                     
                     setPixPayload(payload)
                     setPixQRCode(qrCodeDataUrl)
+                    setShowPaymentPending(true)
                 } catch (error) {
                     console.error('Erro ao gerar QR Code PIX:', error)
+                    alert('Erro ao gerar QR Code. Tente novamente.')
                 }
+            } else {
+                // 4. Se for dinheiro/cartão, enviar direto para WhatsApp
+                handleSendToWhatsApp(orderId)
             }
-
-            // 5. Show success screen
-            setOrderSuccess(true)
         } catch (error) {
             console.error('Error saving order:', error)
             alert('Ops! Tivemos um problema ao processar seu pedido. Por favor, tente novamente.')
         } finally {
             setIsSaving(false)
         }
+    }
+
+    const handleSendToWhatsApp = (orderId) => {
+        const orderIdToUse = orderId || currentOrderId
+
+        // Preparar mensagem do WhatsApp
+        let message = `*🍕 NOVO PEDIDO - PIZZARIA RAMOS*\n\n`
+        message += `*PEDIDO:* #${orderIdToUse}\n`
+        message += `*👤 CLIENTE:* ${formData.nome}\n`
+        message += `*📱 WHATSAPP:* ${formData.whatsapp}\n\n`
+
+        message += `*📍 ENDEREÇO DE ENTREGA:*\n`
+        message += `${formData.endereco}, ${formData.numero}\n`
+        message += `Bairro: ${formData.bairro}\n`
+        if (formData.pontoReferencia) message += `Ref: ${formData.pontoReferencia}\n`
+        if (formData.locationLink) message += `🗺️ *Localização:* ${formData.locationLink}\n`
+        message += `\n`
+
+        message += `*🕒 ENTREGA:* ${formData.tipoEntrega === 'imediata' ? 'Imediata (45min - 1h30min)' : `Agendada para ${formData.horarioAgendado}`}\n\n`
+
+        message += `*🛒 ITENS DO PEDIDO:*\n`
+        message += cart.map(item => `• ${item.quantity}x ${item.name} (${item.variation.size}) - R$ ${(item.variation.price * item.quantity).toFixed(2)}`).join('\n')
+
+        message += `\n\n*💵 PAGAMENTO:*\n`
+        message += `Forma: ${formData.paymentMethod === 'pix' ? 'PIX ✅ PAGO' : formData.paymentMethod === 'dinheiro' ? 'Dinheiro' : 'Cartão'}\n`
+        if (formData.paymentMethod === 'dinheiro') {
+            message += `Troco: ${formData.needChange ? `Para R$ ${formData.changeFor}` : 'Não precisa'}\n`
+        }
+
+        message += `\n*RESUMO FINANCEIRO:*\n`
+        message += `Subtotal: R$ ${cartTotal.toFixed(2)}\n`
+        message += `Entrega: Grátis\n`
+        message += `*TOTAL: R$ ${cartTotal.toFixed(2)}*`
+
+        const encoded = encodeURIComponent(message)
+        window.open(`https://wa.me/${PIZZARIA_WHATSAPP}?text=${encoded}`, '_blank')
+
+        // Mostrar tela de sucesso
+        setShowPaymentPending(false)
+        setOrderSuccess(true)
     }
 
     const handleFinish = () => {
@@ -506,7 +523,143 @@ export default function Checkout({ isOpen, onClose }) {
                         aria-modal="true"
                         aria-labelledby="checkout-title"
                     >
-                        {orderSuccess ? (
+                        {showPaymentPending ? (
+                            <div className="p-8 flex flex-col items-center justify-center text-center h-full space-y-6 scrollbar-hide overflow-y-auto">
+                                <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 mb-2 animate-pulse">
+                                    <CreditCard className="w-10 h-10" />
+                                </div>
+                                <h2 className="text-2xl font-black uppercase italic tracking-tighter text-zinc-800">Aguardando Pagamento</h2>
+                                <p className="text-zinc-600 font-medium text-sm">Pedido <span className="font-black text-primary">#{currentOrderId}</span> registrado!</p>
+
+                                {/* QR Code PIX */}
+                                <div className="w-full bg-zinc-50 border-2 border-dashed border-zinc-200 rounded-2xl p-6 space-y-4">
+                                    <div className="flex items-center justify-center gap-2 text-primary font-black uppercase tracking-wider text-sm">
+                                        <CreditCard className="w-5 h-5" />
+                                        <span>Pagamento via PIX</span>
+                                    </div>
+
+                                    <div className="text-center space-y-4">
+                                        {/* Valor do Pedido */}
+                                        <div className="bg-gradient-to-r from-primary to-red-700 text-white p-4 rounded-2xl">
+                                            <p className="text-[10px] font-black uppercase tracking-widest mb-1">Valor a Pagar</p>
+                                            <p className="text-3xl font-black">R$ {cartTotal.toFixed(2)}</p>
+                                        </div>
+
+                                        {/* QR Code Dinâmico */}
+                                        {pixQRCode ? (
+                                            <div className="bg-white p-4 rounded-2xl inline-block shadow-sm border-2 border-zinc-100">
+                                                <img
+                                                    src={pixQRCode}
+                                                    alt="QR Code PIX"
+                                                    className="w-56 h-56 object-contain mx-auto"
+                                                />
+                                                <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider mt-2">
+                                                    📱 Escaneie com seu app de banco
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div className="bg-white p-8 rounded-2xl inline-block shadow-sm border-2 border-zinc-100">
+                                                <div className="w-56 h-56 flex items-center justify-center">
+                                                    <div className="text-zinc-400 text-center">
+                                                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-3"></div>
+                                                        <p className="text-xs font-bold">Gerando QR Code...</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* PIX Copia e Cola */}
+                                        {pixPayload && (
+                                            <div className="space-y-2">
+                                                <p className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">💰 Ou use o PIX Copia e Cola</p>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="flex-1 bg-white border border-zinc-200 rounded-xl px-3 py-2 font-mono text-[10px] text-zinc-800 font-bold break-all max-h-20 overflow-y-auto">
+                                                        {pixPayload}
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={copyPixPayload}
+                                                        className={`p-3 rounded-xl font-bold transition-all ${copiedPayload
+                                                            ? 'bg-green-500 text-white'
+                                                            : 'bg-primary text-white hover:bg-red-900'
+                                                            }`}
+                                                    >
+                                                        {copiedPayload ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                                                    </button>
+                                                </div>
+                                                {copiedPayload && (
+                                                    <p className="text-xs text-green-600 font-bold animate-in fade-in">✓ Código copiado!</p>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* Informações adicionais */}
+                                        {pixSettings && (
+                                            <div className="bg-white border border-zinc-200 rounded-xl p-3 text-left text-xs space-y-1">
+                                                <p className="font-bold text-zinc-700">
+                                                    <span className="text-zinc-500">Recebedor:</span> {pixSettings.holder_name}
+                                                </p>
+                                                <p className="font-bold text-zinc-700">
+                                                    <span className="text-zinc-500">Banco:</span> {pixSettings.bank_name}
+                                                </p>
+                                                <p className="font-bold text-zinc-700">
+                                                    <span className="text-zinc-500">Cidade:</span> {pixSettings.city || 'Teresina'}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Mensagem de Instrução */}
+                                <div className="w-full bg-blue-50 border-2 border-blue-200 rounded-2xl p-5">
+                                    <div className="flex items-start gap-3 text-left">
+                                        <Info className="w-6 h-6 text-blue-600 shrink-0 mt-0.5" />
+                                        <div>
+                                            <h3 className="font-black text-blue-900 mb-2 text-sm uppercase">Importante</h3>
+                                            <p className="text-sm text-blue-800 leading-relaxed">
+                                                Após efetuar o pagamento via PIX, confirme abaixo para enviar seu pedido à nossa equipe no WhatsApp.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Checkbox de Confirmação */}
+                                <div className="w-full bg-white border-2 border-zinc-200 rounded-xl p-4">
+                                    <label className="flex items-start gap-3 cursor-pointer group">
+                                        <input
+                                            type="checkbox"
+                                            checked={paymentConfirmed}
+                                            onChange={(e) => setPaymentConfirmed(e.target.checked)}
+                                            className="w-5 h-5 text-primary border-2 border-zinc-300 rounded focus:ring-2 focus:ring-primary mt-0.5 cursor-pointer"
+                                        />
+                                        <span className="text-sm text-zinc-700 font-medium group-hover:text-zinc-900 transition-colors">
+                                            ✅ Confirmo que realizei o pagamento via PIX
+                                        </span>
+                                    </label>
+                                </div>
+
+                                {/* Botão para Enviar ao WhatsApp */}
+                                <button
+                                    onClick={() => handleSendToWhatsApp()}
+                                    disabled={!paymentConfirmed}
+                                    className={`w-full py-4 rounded-xl font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
+                                        paymentConfirmed 
+                                            ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl' 
+                                            : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
+                                    }`}
+                                >
+                                    <Send className="w-5 h-5" />
+                                    {paymentConfirmed ? 'Enviar Pedido à Equipe' : 'Confirme o Pagamento Primeiro'}
+                                </button>
+
+                                <button
+                                    onClick={onClose}
+                                    className="text-zinc-500 hover:text-zinc-700 text-sm font-bold underline transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                            </div>
+                        ) : orderSuccess ? (
                             <div className="p-8 flex flex-col items-center justify-center text-center h-full space-y-6 scrollbar-hide overflow-y-auto">
                                 <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-2">
                                     <Check className="w-10 h-10" />
@@ -523,87 +676,20 @@ export default function Checkout({ isOpen, onClose }) {
                                     <p className="text-lg font-bold text-blue-900">{calculateDeliveryTime()}</p>
                                 </div>
 
-                                {formData.paymentMethod === 'pix' && pixSettings && (
-                                    <div className="w-full bg-zinc-50 border-2 border-dashed border-zinc-200 rounded-2xl p-6 space-y-4">
-                                        <div className="flex items-center justify-center gap-2 text-primary font-black uppercase tracking-wider text-sm">
-                                            <CreditCard className="w-5 h-5" />
-                                            <span>Pagamento via PIX</span>
-                                        </div>
-
-                                        <div className="text-center space-y-4">
-                                            {/* Valor do Pedido */}
-                                            <div className="bg-gradient-to-r from-primary to-red-700 text-white p-4 rounded-2xl">
-                                                <p className="text-[10px] font-black uppercase tracking-widest mb-1">Valor a Pagar</p>
-                                                <p className="text-3xl font-black">R$ {cartTotal.toFixed(2)}</p>
-                                            </div>
-
-                                            {/* QR Code Dinâmico */}
-                                            {pixQRCode ? (
-                                                <div className="bg-white p-4 rounded-2xl inline-block shadow-sm border-2 border-zinc-100">
-                                                    <img
-                                                        src={pixQRCode}
-                                                        alt="QR Code PIX"
-                                                        className="w-56 h-56 object-contain mx-auto"
-                                                    />
-                                                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider mt-2">
-                                                        📱 Escaneie com seu app de banco
-                                                    </p>
-                                                </div>
-                                            ) : (
-                                                <div className="bg-white p-8 rounded-2xl inline-block shadow-sm border-2 border-zinc-100">
-                                                    <div className="w-56 h-56 flex items-center justify-center">
-                                                        <div className="text-zinc-400 text-center">
-                                                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-3"></div>
-                                                            <p className="text-xs font-bold">Gerando QR Code...</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* PIX Copia e Cola */}
-                                            {pixPayload && (
-                                                <div className="space-y-2">
-                                                    <p className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">💰 Ou use o PIX Copia e Cola</p>
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="flex-1 bg-white border border-zinc-200 rounded-xl px-3 py-2 font-mono text-[10px] text-zinc-800 font-bold break-all max-h-20 overflow-y-auto">
-                                                            {pixPayload}
-                                                        </div>
-                                                        <button
-                                                            type="button"
-                                                            onClick={copyPixPayload}
-                                                            className={`p-3 rounded-xl font-bold transition-all ${copiedPayload
-                                                                ? 'bg-green-500 text-white'
-                                                                : 'bg-primary text-white hover:bg-red-900'
-                                                                }`}
-                                                        >
-                                                            {copiedPayload ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
-                                                        </button>
-                                                    </div>
-                                                    {copiedPayload && (
-                                                        <p className="text-xs text-green-600 font-bold animate-in fade-in">✓ Código copiado!</p>
-                                                    )}
-                                                </div>
-                                            )}
-
-                                            {/* Informações adicionais */}
-                                            <div className="bg-white border border-zinc-200 rounded-xl p-3 text-left text-xs space-y-1">
-                                                <p className="font-bold text-zinc-700">
-                                                    <span className="text-zinc-500">Recebedor:</span> {pixSettings.holder_name}
-                                                </p>
-                                                <p className="font-bold text-zinc-700">
-                                                    <span className="text-zinc-500">Banco:</span> {pixSettings.bank_name}
-                                                </p>
-                                                <p className="font-bold text-zinc-700">
-                                                    <span className="text-zinc-500">Cidade:</span> {pixSettings.city || 'Teresina'}
-                                                </p>
-                                            </div>
-
-                                            <div className="bg-primary/10 text-primary p-3 rounded-xl text-xs font-bold leading-relaxed">
-                                                ⚠️ Importante: Após o pagamento, envie o comprovante no WhatsApp para confirmarmos seu pedido!
-                                            </div>
-                                        </div>
+                                {/* Informação de Pagamento */}
+                                <div className="w-full bg-green-50 border-2 border-green-200 rounded-2xl p-5">
+                                    <div className="flex items-center justify-center gap-2 text-green-700 font-black uppercase tracking-wider text-sm mb-3">
+                                        <Check className="w-5 h-5" />
+                                        <span>Pagamento</span>
                                     </div>
-                                )}
+                                    <p className="text-sm text-green-800 leading-relaxed">
+                                        {formData.paymentMethod === 'pix' 
+                                            ? '✅ PIX confirmado! Nossa equipe já recebeu seu pedido.' 
+                                            : formData.paymentMethod === 'dinheiro'
+                                            ? `💵 Pagamento em dinheiro na entrega${formData.needChange ? ` - Troco para R$ ${formData.changeFor}` : ''}`
+                                            : '💳 Pagamento com cartão na entrega'}
+                                    </p>
+                                </div>
 
                                 <button
                                     onClick={handleFinish}
