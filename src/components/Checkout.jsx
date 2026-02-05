@@ -176,14 +176,22 @@ export default function Checkout({ isOpen, onClose }) {
 
             console.log('PIX Config Response:', { data, error })
             
+            if (error) {
+                console.error('❌ ERRO ao buscar PIX config:', error)
+                if (error.code === 'PGRST116' || error.message.includes('0 rows')) {
+                    console.error('⚠️ Tabela store_settings não tem dados! Execute o SQL de setup.')
+                }
+                return
+            }
+            
             if (data && data.value) {
-                console.log('PIX Settings loaded:', data.value)
+                console.log('✅ PIX Settings loaded:', data.value)
                 setPixSettings(data.value)
             } else {
-                console.warn('PIX settings não encontrado ou vazio')
+                console.warn('⚠️ PIX settings não encontrado ou vazio')
             }
         } catch (error) {
-            console.error('Error fetching PIX settings:', error)
+            console.error('❌ Exceção ao buscar PIX settings:', error)
         }
     }
 
@@ -450,7 +458,14 @@ export default function Checkout({ isOpen, onClose }) {
             
             if (formData.paymentMethod === 'pix') {
                 if (!pixSettings || !pixSettings.pix_key) {
-                    alert('Configure as informações de PIX no painel admin antes de usar esta forma de pagamento.')
+                    alert('⚠️ PIX NÃO CONFIGURADO!\n\n' +
+                          'As configurações de PIX não foram encontradas no banco de dados.\n\n' +
+                          '📋 SOLUÇÃO:\n' +
+                          '1. Vá em /admin/dashboard\n' +
+                          '2. Clique em "💠 Configurar PIX"\n' +
+                          '3. Preencha todos os campos\n' +
+                          '4. Clique em "Salvar Configurações"\n\n' +
+                          'Ou execute o arquivo supabase_setup.sql no Supabase SQL Editor.')
                     setIsSaving(false)
                     return
                 }
