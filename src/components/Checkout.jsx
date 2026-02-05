@@ -676,9 +676,9 @@ export default function Checkout({ isOpen, onClose }) {
                                     Cancelar
                                 </button>
                             </div>
-                                )
-                            } else if (orderSuccess) {
-                                return (
+                        )
+                    } else if (orderSuccess) {
+                        return (
                             <div className="p-8 flex flex-col items-center justify-center text-center h-full space-y-6 scrollbar-hide overflow-y-auto">
                                 <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-2">
                                     <Check className="w-10 h-10" />
@@ -717,9 +717,9 @@ export default function Checkout({ isOpen, onClose }) {
                                     Fechar e Voltar ao Início
                                 </button>
                             </div>
-                                )
-                            } else {
-                                return (
+                        )
+                    } else {
+                        return (
                             <>
                                 {/* Header */}
                                 <div className="p-6 bg-primary text-white flex justify-between items-center shrink-0">
@@ -1091,9 +1091,9 @@ export default function Checkout({ isOpen, onClose }) {
                                     </button>
                                 </div>
                             </>
-                                )
-                            }
-                        })()}
+                        )
+                    }
+                })()}
                     </motion.div>
                 </div>
             )}
