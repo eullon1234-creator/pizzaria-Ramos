@@ -22,7 +22,8 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
+      injectRegister: 'auto',
       includeAssets: ['vite.svg', 'robots.txt'],
       manifest: {
         name: 'PIZZARIA RAMOS - Delivery',

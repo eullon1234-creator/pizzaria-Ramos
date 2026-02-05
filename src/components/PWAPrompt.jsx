@@ -1,11 +1,24 @@
 import { useEffect, useState } from 'react';
 import { Bell, Download, X, RefreshCw } from 'lucide-react';
+import { useRegisterSW } from 'virtual:pwa-register/react';
 
 export default function PWAPrompt() {
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
-  const [showUpdatePrompt, setShowUpdatePrompt] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [registration, setRegistration] = useState(null);
+
+  // Hook do PWA para detectar atualizações
+  const {
+    offlineReady: [offlineReady, setOfflineReady],
+    needRefresh: [needRefresh, setNeedRefresh],
+    updateServiceWorker,
+  } = useRegisterSW({
+    onRegistered(r) {
+      console.log('SW Registered: ', r);
+    },
+    onRegisterError(error) {
+      console.log('SW registration error', error);
+    },
+  });
 
   useEffect(() => {
     // Detectar quando o app pode ser instalado
@@ -23,27 +36,8 @@ export default function PWAPrompt() {
       }
     };
 
-    // Detectar quando há uma atualização disponível
-    const handleUpdateFound = (reg) => {
-      const newWorker = reg.installing;
-      
-      newWorker.addEventListener('statechange', () => {
-        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-          setShowUpdatePrompt(true);
-          setRegistration(reg);
-        }
-      });
-    };
-
     // Registrar listeners
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    // Verificar atualizações do service worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.ready.then(reg => {
-        reg.addEventListener('updatefound', () => handleUpdateFound(reg));
-      });
-    }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -69,14 +63,16 @@ export default function PWAPrompt() {
     setShowInstallPrompt(false);
   };
 
-  const handleUpdate = () => {
-    if (registration && registration.waiting) {
-      registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-      window.location.reload();
-    }
+  const handleUpdate = async () => {
+    await updateServiceWorker(true);
   };
 
-  if (!showInstallPrompt && !showUpdatePrompt) return null;
+  const closeUpdatePrompt = () => {
+    setOfflineReady(false);
+    setNeedRefresh(false);
+  };
+
+  if (!showInstallPrompt && !needRefresh && !offlineReady) return null;
 
   return (
     <>
@@ -117,11 +113,11 @@ export default function PWAPrompt() {
       )}
 
       {/* Prompt de Atualização */}
-      {showUpdatePrompt && (
-        <div className="fixed top-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50 animate-slide-down">
+      {needRefresh && (
+        <div className="fixed top-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-[9999] animate-slide-down">
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-2xl p-4">
             <div className="flex items-start gap-3">
-              <div className="bg-white/20 rounded-full p-2 flex-shrink-0">
+              <div className="bg-white/20 rounded-full p-2 flex-shrink-0 animate-pulse">
                 <RefreshCw className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1 text-white">
@@ -129,22 +125,51 @@ export default function PWAPrompt() {
                   Nova Versão Disponível! ✨
                 </h3>
                 <p className="text-sm text-blue-100 mb-3">
-                  Atualize agora para a versão mais recente com novas funcionalidades.
+                  Atualize agora para a versão mais recente com novas funcionalidades e QR Code PIX dinâmico!
                 </p>
                 <div className="flex gap-2">
                   <button
                     onClick={handleUpdate}
-                    className="flex-1 bg-white text-blue-600 font-semibold py-2 px-4 rounded-lg hover:bg-blue-50 transition-colors"
+                    className="flex-1 bg-white text-blue-600 font-semibold py-2 px-4 rounded-lg hover:bg-blue-50 transition-colors flex items-center justify-center gap-2"
                   >
+                    <RefreshCw className="w-4 h-4" />
                     Atualizar Agora
                   </button>
                   <button
-                    onClick={() => setShowUpdatePrompt(false)}
+                    onClick={closeUpdatePrompt}
                     className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                    aria-label="Fechar"
                   >
                     <X className="w-5 h-5" />
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notificação de Offline Ready */}
+      {offlineReady && (
+        <div className="fixed top-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-[9999] animate-slide-down">
+          <div className="bg-gradient-to-r from-green-600 to-green-700 rounded-lg shadow-2xl p-4">
+            <div className="flex items-start gap-3">
+              <div className="bg-white/20 rounded-full p-2 flex-shrink-0">
+                <Bell className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1 text-white">
+                <h3 className="font-bold mb-1">
+                  App Pronto! 🎉
+                </h3>
+                <p className="text-sm text-green-100 mb-3">
+                  O app está pronto para funcionar offline. Você pode usar mesmo sem internet!
+                </p>
+                <button
+                  onClick={closeUpdatePrompt}
+                  className="w-full bg-white text-green-600 font-semibold py-2 px-4 rounded-lg hover:bg-green-50 transition-colors"
+                >
+                  Entendi
+                </button>
               </div>
             </div>
           </div>
