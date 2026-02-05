@@ -9,6 +9,7 @@ export default function PixSettingsModal({ isOpen, onClose }) {
     const [keyType, setKeyType] = useState('cpf') // cpf, cnpj, email, phone, random
     const [holderName, setHolderName] = useState('')
     const [bankName, setBankName] = useState('')
+    const [city, setCity] = useState('Teresina')
     const [saveSuccess, setSaveSuccess] = useState(false)
     const [error, setError] = useState('')
 
@@ -31,6 +32,10 @@ export default function PixSettingsModal({ isOpen, onClose }) {
         }
         if (!bankName.trim()) {
             setError('Nome do banco é obrigatório')
+            return false
+        }
+        if (!city.trim()) {
+            setError('Cidade é obrigatória')
             return false
         }
 
@@ -76,6 +81,7 @@ export default function PixSettingsModal({ isOpen, onClose }) {
                 setKeyType(data.value.key_type || 'cpf')
                 setHolderName(data.value.holder_name || '')
                 setBankName(data.value.bank_name || '')
+                setCity(data.value.city || 'Teresina')
             }
         } catch (error) {
             console.error('Error fetching PIX settings:', error)
@@ -98,7 +104,8 @@ export default function PixSettingsModal({ isOpen, onClose }) {
             pix_key: pixKey.trim(),
             key_type: keyType,
             holder_name: holderName.trim(),
-            bank_name: bankName.trim()
+            bank_name: bankName.trim(),
+            city: city.trim()
         }
 
         try {
@@ -267,6 +274,21 @@ export default function PixSettingsModal({ isOpen, onClose }) {
                                             }}
                                             className="w-full bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary font-medium"
                                             placeholder="Ex: Nubank, Banco do Brasil, Inter..."
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest ml-1">Cidade</label>
+                                        <input
+                                            required
+                                            type="text"
+                                            value={city}
+                                            onChange={e => {
+                                                setCity(e.target.value)
+                                                setError('')
+                                            }}
+                                            className="w-full bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary font-medium"
+                                            placeholder="Ex: Teresina, São Paulo, Rio de Janeiro..."
                                         />
                                     </div>
 
