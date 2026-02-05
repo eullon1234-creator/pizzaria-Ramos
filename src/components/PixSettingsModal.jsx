@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Save, X, Loader2, CreditCard, AlertCircle, CheckCircle } from 'lucide-react'
+import { Save, X, Loader2, CreditCard, AlertCircle, CheckCircle, Eye, Copy, Check } from 'lucide-react'
+import { generateDynamicPixQRCode } from '../lib/pixQRCode'
 
 export default function PixSettingsModal({ isOpen, onClose }) {
     const [loading, setLoading] = useState(false)
@@ -12,12 +13,20 @@ export default function PixSettingsModal({ isOpen, onClose }) {
     const [city, setCity] = useState('Teresina')
     const [saveSuccess, setSaveSuccess] = useState(false)
     const [error, setError] = useState('')
+    const [showPreview, setShowPreview] = useState(false)
+    const [previewQRCode, setPreviewQRCode] = useState(null)
+    const [previewPayload, setPreviewPayload] = useState(null)
+    const [previewLoading, setPreviewLoading] = useState(false)
+    const [previewCopied, setPreviewCopied] = useState(false)
 
     useEffect(() => {
         if (isOpen) {
             fetchPixSettings()
             setSaveSuccess(false)
             setError('')
+            setShowPreview(false)
+            setPreviewQRCode(null)
+            setPreviewPayload(null)
         }
     }, [isOpen])
 
@@ -150,6 +159,37 @@ export default function PixSettingsModal({ isOpen, onClose }) {
         }
     }
 
+    const handleGeneratePreview = async () => {
+        if (!validateInputs()) return
+        
+        setPreviewLoading(true)
+        try {
+            const { payload, qrCodeDataUrl } = await generateDynamicPixQRCode({
+                pixKey: pixKey.trim(),
+                keyType: keyType,
+                holderName: holderName.trim() || 'PIZZARIA RAMOS',
+                city: city.trim() || 'Teresina',
+                amount: 1.00,
+                transactionId: 'TESTE-PREVIEW'
+            })
+            setPreviewPayload(payload)
+            setPreviewQRCode(qrCodeDataUrl)
+            setShowPreview(true)
+        } catch (err) {
+            setError('Erro ao gerar preview do QR Code.')
+        } finally {
+            setPreviewLoading(false)
+        }
+    }
+
+    const copyPreviewPayload = () => {
+        if (previewPayload) {
+            navigator.clipboard.writeText(previewPayload)
+            setPreviewCopied(true)
+            setTimeout(() => setPreviewCopied(false), 2000)
+        }
+    }
+
     return (
         <AnimatePresence>
             {isOpen && (
@@ -166,7 +206,7 @@ export default function PixSettingsModal({ isOpen, onClose }) {
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0.9, opacity: 0 }}
-                        className="relative bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
+                        className="relative bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
                     >
                         {saveSuccess ? (
                             <div className="p-12 flex flex-col items-center justify-center text-center space-y-4 bg-white">
@@ -188,7 +228,7 @@ export default function PixSettingsModal({ isOpen, onClose }) {
                                     </button>
                                 </div>
 
-                                <form onSubmit={handleSave} className="p-6 space-y-4">
+                                <form onSubmit={handleSave} className="p-6 space-y-4 overflow-y-auto scrollbar-hide">
                                     {error && (
                                         <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex gap-3">
                                             <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
@@ -298,6 +338,58 @@ export default function PixSettingsModal({ isOpen, onClose }) {
                                             Essas informações aparecerão na tela de sucesso do pedido para o cliente saber como pagar. Certifique-se de que estão corretas!
                                         </p>
                                     </div>
+
+                                    {/* Botão de Preview */}
+                                    <button
+                                        type="button"
+                                        onClick={handleGeneratePreview}
+                                        disabled={previewLoading || !pixKey.trim()}
+                                        className="w-full py-3 bg-zinc-100 text-zinc-700 rounded-xl font-black uppercase tracking-widest text-sm hover:bg-zinc-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                    >
+                                        {previewLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+                                        {previewLoading ? 'Gerando...' : 'Testar QR Code'}
+                                    </button>
+
+                                    {/* Preview do QR Code */}
+                                    {showPreview && previewQRCode && (
+                                        <div className="bg-zinc-50 border-2 border-dashed border-zinc-200 rounded-2xl p-4 space-y-3 animate-in fade-in">
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">🔍 Preview (R$ 1,00 teste)</p>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowPreview(false)}
+                                                    className="text-zinc-400 hover:text-zinc-600 transition-colors"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                            <div className="bg-white p-3 rounded-xl inline-block shadow-sm border border-zinc-100 mx-auto">
+                                                <img
+                                                    src={previewQRCode}
+                                                    alt="Preview QR Code PIX"
+                                                    className="w-40 h-40 object-contain mx-auto"
+                                                />
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex-1 bg-white border border-zinc-200 rounded-lg px-2 py-1.5 font-mono text-[9px] text-zinc-600 break-all max-h-14 overflow-y-auto">
+                                                    {previewPayload}
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={copyPreviewPayload}
+                                                    className={`p-2 rounded-lg transition-all ${previewCopied ? 'bg-green-500 text-white' : 'bg-zinc-200 text-zinc-600 hover:bg-zinc-300'}`}
+                                                >
+                                                    {previewCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                                                </button>
+                                            </div>
+                                            {previewCopied && (
+                                                <p className="text-[10px] text-green-600 font-bold text-center">✓ Código copiado! Cole no app do seu banco para testar.</p>
+                                            )}
+                                            <p className="text-[10px] text-zinc-400 text-center leading-relaxed">
+                                                ℹ️ Este é um QR Code real com valor de <strong>R$ 1,00</strong>. Escaneie com o app do seu banco para verificar se os dados estão corretos.
+                                            </p>
+                                        </div>
+                                    )}
 
                                     <button
                                         type="submit"

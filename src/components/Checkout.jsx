@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, MapPin, Phone, User, Send, Clock, LocateFixed, Copy, Check, CreditCard, Save, Info, DollarSign } from 'lucide-react'
+import { X, MapPin, Phone, User, Send, Clock, LocateFixed, Copy, Check, CreditCard, Save, Info, DollarSign, RefreshCw, Timer, ShoppingBag } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { supabase } from '../lib/supabase'
 import { generateDynamicPixQRCode } from '../lib/pixQRCode'
@@ -21,6 +21,10 @@ export default function Checkout({ isOpen, onClose }) {
     const [businessHours, setBusinessHours] = useState(null)
     const [saveData, setSaveData] = useState(false)
     const [hasStoredData, setHasStoredData] = useState(false)
+    const [pixTimeLeft, setPixTimeLeft] = useState(0)
+    const [pixExpired, setPixExpired] = useState(false)
+    const pixTimerRef = useRef(null)
+    const PIX_EXPIRATION_SECONDS = 15 * 60 // 15 minutos
     const [formData, setFormData] = useState({
         nome: '',
         whatsapp: '',
@@ -98,6 +102,56 @@ export default function Checkout({ isOpen, onClose }) {
         setErrors(prev => ({ ...prev, [name]: error }))
     }
 
+    // Timer de expiração do PIX
+    useEffect(() => {
+        if (showPaymentPending && pixTimeLeft > 0 && !pixExpired) {
+            pixTimerRef.current = setInterval(() => {
+                setPixTimeLeft(prev => {
+                    if (prev <= 1) {
+                        clearInterval(pixTimerRef.current)
+                        setPixExpired(true)
+                        return 0
+                    }
+                    return prev - 1
+                })
+            }, 1000)
+        }
+        return () => {
+            if (pixTimerRef.current) clearInterval(pixTimerRef.current)
+        }
+    }, [showPaymentPending, pixExpired])
+
+    const formatTimer = (seconds) => {
+        const min = Math.floor(seconds / 60).toString().padStart(2, '0')
+        const sec = (seconds % 60).toString().padStart(2, '0')
+        return `${min}:${sec}`
+    }
+
+    const startPixTimer = () => {
+        if (pixTimerRef.current) clearInterval(pixTimerRef.current)
+        setPixExpired(false)
+        setPixTimeLeft(PIX_EXPIRATION_SECONDS)
+    }
+
+    const handleRegeneratePixCode = useCallback(async () => {
+        if (!pixSettings?.pix_key || !currentOrderId) return
+        try {
+            const { payload, qrCodeDataUrl } = await generateDynamicPixQRCode({
+                pixKey: pixSettings.pix_key,
+                keyType: pixSettings.key_type || 'random',
+                holderName: pixSettings.holder_name || 'PIZZARIA RAMOS',
+                city: pixSettings.city || 'Teresina',
+                amount: cartTotal,
+                transactionId: currentOrderId
+            })
+            setPixPayload(payload)
+            setPixQRCode(qrCodeDataUrl)
+            startPixTimer()
+        } catch (error) {
+            console.error('Erro ao regenerar QR Code PIX:', error)
+        }
+    }, [pixSettings, currentOrderId, cartTotal])
+
     useEffect(() => {
         if (isOpen) {
             // Reset all states when opening
@@ -109,7 +163,10 @@ export default function Checkout({ isOpen, onClose }) {
             setCopiedPayload(false)
             setPixQRCode(null)
             setPixPayload(null)
+            setPixExpired(false)
+            setPixTimeLeft(0)
             setErrors({})
+            if (pixTimerRef.current) clearInterval(pixTimerRef.current)
             
             // Fetch settings
             fetchPixSettings()
@@ -462,6 +519,7 @@ export default function Checkout({ isOpen, onClose }) {
                     setPixPayload(payload)
                     setPixQRCode(qrCodeDataUrl)
                     setShowPaymentPending(true)
+                    startPixTimer()
                     
                     setIsSaving(false)
                     return // Importante: parar aqui para mostrar tela de pagamento
@@ -558,15 +616,47 @@ export default function Checkout({ isOpen, onClose }) {
                         {(() => {
                             if (showPaymentPending) {
                                 return (
-                            <div className="p-8 flex flex-col items-center justify-center text-center h-full space-y-6 scrollbar-hide overflow-y-auto">
-                                <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 mb-2 animate-pulse">
-                                    <CreditCard className="w-10 h-10" />
+                            <div className="p-6 flex flex-col items-center justify-center text-center h-full space-y-5 scrollbar-hide overflow-y-auto">
+                                {/* Header com Timer */}
+                                <div className="w-full">
+                                    <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 mx-auto mb-3 animate-pulse">
+                                        <CreditCard className="w-8 h-8" />
+                                    </div>
+                                    <h2 className="text-xl font-black uppercase italic tracking-tighter text-zinc-800">Aguardando Pagamento</h2>
+                                    <p className="text-zinc-600 font-medium text-sm mt-1">Pedido <span className="font-black text-primary">#{currentOrderId}</span></p>
+                                    
+                                    {/* Timer de Expiração */}
+                                    {!pixExpired ? (
+                                        <div className={`mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-black ${
+                                            pixTimeLeft <= 120 
+                                                ? 'bg-red-100 text-red-700 animate-pulse' 
+                                                : pixTimeLeft <= 300 
+                                                    ? 'bg-yellow-100 text-yellow-700' 
+                                                    : 'bg-green-100 text-green-700'
+                                        }`}>
+                                            <Timer className="w-4 h-4" />
+                                            <span>Expira em {formatTimer(pixTimeLeft)}</span>
+                                        </div>
+                                    ) : (
+                                        <div className="mt-3 space-y-3">
+                                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-black bg-red-100 text-red-700">
+                                                <Timer className="w-4 h-4" />
+                                                <span>QR Code expirado!</span>
+                                            </div>
+                                            <button
+                                                onClick={handleRegeneratePixCode}
+                                                className="flex items-center justify-center gap-2 w-full py-3 bg-primary text-white rounded-xl font-black uppercase text-sm tracking-wider hover:bg-red-700 transition-all"
+                                            >
+                                                <RefreshCw className="w-4 h-4" />
+                                                Gerar Novo QR Code
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
-                                <h2 className="text-2xl font-black uppercase italic tracking-tighter text-zinc-800">Aguardando Pagamento</h2>
-                                <p className="text-zinc-600 font-medium text-sm">Pedido <span className="font-black text-primary">#{currentOrderId}</span> registrado!</p>
 
                                 {/* QR Code PIX */}
-                                <div className="w-full bg-zinc-50 border-2 border-dashed border-zinc-200 rounded-2xl p-6 space-y-4">
+                                {!pixExpired && (
+                                <div className="w-full bg-zinc-50 border-2 border-dashed border-zinc-200 rounded-2xl p-5 space-y-4">
                                     <div className="flex items-center justify-center gap-2 text-primary font-black uppercase tracking-wider text-sm">
                                         <CreditCard className="w-5 h-5" />
                                         <span>Pagamento via PIX</span>
@@ -643,14 +733,39 @@ export default function Checkout({ isOpen, onClose }) {
                                         )}
                                     </div>
                                 </div>
+                                )}
+
+                                {/* Resumo do Pedido */}
+                                <div className="w-full bg-white border border-zinc-200 rounded-2xl overflow-hidden">
+                                    <div className="flex items-center gap-2 px-4 py-3 bg-zinc-50 border-b border-zinc-100">
+                                        <ShoppingBag className="w-4 h-4 text-zinc-500" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Resumo do Pedido</span>
+                                    </div>
+                                    <div className="p-3 space-y-2 max-h-32 overflow-y-auto scrollbar-hide">
+                                        {cart.map((item, idx) => (
+                                            <div key={idx} className="flex justify-between items-center text-xs">
+                                                <span className="text-zinc-700 font-medium truncate mr-2">
+                                                    {item.quantity}x {item.name} <span className="text-zinc-400">({item.variation.size})</span>
+                                                </span>
+                                                <span className="font-bold text-zinc-800 whitespace-nowrap">
+                                                    R$ {(item.variation.price * item.quantity).toFixed(2)}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="flex justify-between items-center px-4 py-3 bg-zinc-50 border-t border-zinc-100">
+                                        <span className="text-xs font-black uppercase text-zinc-600">Total</span>
+                                        <span className="text-sm font-black text-primary">R$ {cartTotal.toFixed(2)}</span>
+                                    </div>
+                                </div>
 
                                 {/* Mensagem de Instrução */}
-                                <div className="w-full bg-blue-50 border-2 border-blue-200 rounded-2xl p-5">
+                                <div className="w-full bg-blue-50 border-2 border-blue-200 rounded-2xl p-4">
                                     <div className="flex items-start gap-3 text-left">
-                                        <Info className="w-6 h-6 text-blue-600 shrink-0 mt-0.5" />
+                                        <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
                                         <div>
-                                            <h3 className="font-black text-blue-900 mb-2 text-sm uppercase">Importante</h3>
-                                            <p className="text-sm text-blue-800 leading-relaxed">
+                                            <h3 className="font-black text-blue-900 mb-1 text-xs uppercase">Importante</h3>
+                                            <p className="text-xs text-blue-800 leading-relaxed">
                                                 Após efetuar o pagamento via PIX, confirme abaixo para enviar seu pedido à nossa equipe no WhatsApp.
                                             </p>
                                         </div>
