@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, MapPin, Phone, User, Send, Clock, LocateFixed, Copy, Check, CreditCard, Save, Info, DollarSign } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { supabase } from '../lib/supabase'
+import { generateDynamicPixQRCode } from '../lib/pixQRCode'
 
 export default function Checkout({ isOpen, onClose }) {
     const { cart, cartTotal, clearCart } = useCart()
@@ -10,7 +11,10 @@ export default function Checkout({ isOpen, onClose }) {
     const [isLoadingLocation, setIsLoadingLocation] = useState(false)
     const [orderSuccess, setOrderSuccess] = useState(false)
     const [pixSettings, setPixSettings] = useState(null)
+    const [pixQRCode, setPixQRCode] = useState(null)
+    const [pixPayload, setPixPayload] = useState(null)
     const [copied, setCopied] = useState(false)
+    const [copiedPayload, setCopiedPayload] = useState(false)
     const [businessHours, setBusinessHours] = useState(null)
     const [saveData, setSaveData] = useState(false)
     const [hasStoredData, setHasStoredData] = useState(false)
@@ -101,6 +105,9 @@ export default function Checkout({ isOpen, onClose }) {
             // Reset states when modal re-opens
             setOrderSuccess(false)
             setCopied(false)
+            setCopiedPayload(false)
+            setPixQRCode(null)
+            setPixPayload(null)
         }
     }, [isOpen])
 
@@ -188,6 +195,14 @@ export default function Checkout({ isOpen, onClose }) {
             navigator.clipboard.writeText(pixSettings.pix_key)
             setCopied(true)
             setTimeout(() => setCopied(false), 2000)
+        }
+    }
+
+    const copyPixPayload = () => {
+        if (pixPayload) {
+            navigator.clipboard.writeText(pixPayload)
+            setCopiedPayload(true)
+            setTimeout(() => setCopiedPayload(false), 2000)
         }
     }
 
@@ -435,7 +450,26 @@ export default function Checkout({ isOpen, onClose }) {
             const encoded = encodeURIComponent(message)
             window.open(`https://wa.me/${PIZZARIA_WHATSAPP}?text=${encoded}`, '_blank')
 
-            // 4. Show success screen
+            // 4. Gerar QR Code PIX dinâmico (se pagamento for PIX)
+            if (formData.paymentMethod === 'pix' && pixSettings) {
+                try {
+                    const { payload, qrCodeDataUrl } = await generateDynamicPixQRCode({
+                        pixKey: pixSettings.pix_key,
+                        keyType: pixSettings.key_type || 'random',
+                        holderName: pixSettings.holder_name,
+                        city: pixSettings.city || 'Teresina',
+                        amount: cartTotal,
+                        transactionId: orderId
+                    })
+                    
+                    setPixPayload(payload)
+                    setPixQRCode(qrCodeDataUrl)
+                } catch (error) {
+                    console.error('Erro ao gerar QR Code PIX:', error)
+                }
+            }
+
+            // 5. Show success screen
             setOrderSuccess(true)
         } catch (error) {
             console.error('Error saving order:', error)
@@ -497,45 +531,75 @@ export default function Checkout({ isOpen, onClose }) {
                                         </div>
 
                                         <div className="text-center space-y-4">
-                                            {/* QR Code */}
-                                            {pixSettings.qr_code_url && (
-                                                <div className="bg-white p-4 rounded-2xl inline-block shadow-sm">
+                                            {/* Valor do Pedido */}
+                                            <div className="bg-gradient-to-r from-primary to-red-700 text-white p-4 rounded-2xl">
+                                                <p className="text-[10px] font-black uppercase tracking-widest mb-1">Valor a Pagar</p>
+                                                <p className="text-3xl font-black">R$ {cartTotal.toFixed(2)}</p>
+                                            </div>
+
+                                            {/* QR Code Dinâmico */}
+                                            {pixQRCode ? (
+                                                <div className="bg-white p-4 rounded-2xl inline-block shadow-sm border-2 border-zinc-100">
                                                     <img
-                                                        src={pixSettings.qr_code_url}
+                                                        src={pixQRCode}
                                                         alt="QR Code PIX"
-                                                        className="w-48 h-48 object-contain mx-auto"
+                                                        className="w-56 h-56 object-contain mx-auto"
                                                     />
-                                                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider mt-2">Escaneie o QR Code</p>
+                                                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider mt-2">
+                                                        📱 Escaneie com seu app de banco
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                <div className="bg-white p-8 rounded-2xl inline-block shadow-sm border-2 border-zinc-100">
+                                                    <div className="w-56 h-56 flex items-center justify-center">
+                                                        <div className="text-zinc-400 text-center">
+                                                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-3"></div>
+                                                            <p className="text-xs font-bold">Gerando QR Code...</p>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             )}
 
-                                            {/* PIX Key */}
-                                            {pixSettings.pix_key && (
+                                            {/* PIX Copia e Cola */}
+                                            {pixPayload && (
                                                 <div className="space-y-2">
-                                                    <p className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Ou copie a chave PIX</p>
+                                                    <p className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">💰 Ou use o PIX Copia e Cola</p>
                                                     <div className="flex items-center gap-2">
-                                                        <div className="flex-1 bg-white border border-zinc-200 rounded-xl px-4 py-3 font-mono text-sm text-zinc-800 font-bold break-all">
-                                                            {pixSettings.pix_key}
+                                                        <div className="flex-1 bg-white border border-zinc-200 rounded-xl px-3 py-2 font-mono text-[10px] text-zinc-800 font-bold break-all max-h-20 overflow-y-auto">
+                                                            {pixPayload}
                                                         </div>
                                                         <button
                                                             type="button"
-                                                            onClick={copyPixKey}
-                                                            className={`p-3 rounded-xl font-bold transition-all ${copied
+                                                            onClick={copyPixPayload}
+                                                            className={`p-3 rounded-xl font-bold transition-all ${copiedPayload
                                                                 ? 'bg-green-500 text-white'
                                                                 : 'bg-primary text-white hover:bg-red-900'
                                                                 }`}
                                                         >
-                                                            {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                                                            {copiedPayload ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
                                                         </button>
                                                     </div>
-                                                    {copied && (
-                                                        <p className="text-xs text-green-600 font-bold animate-in fade-in">✓ Chave copiada!</p>
+                                                    {copiedPayload && (
+                                                        <p className="text-xs text-green-600 font-bold animate-in fade-in">✓ Código copiado!</p>
                                                     )}
                                                 </div>
                                             )}
 
+                                            {/* Informações adicionais */}
+                                            <div className="bg-white border border-zinc-200 rounded-xl p-3 text-left text-xs space-y-1">
+                                                <p className="font-bold text-zinc-700">
+                                                    <span className="text-zinc-500">Recebedor:</span> {pixSettings.holder_name}
+                                                </p>
+                                                <p className="font-bold text-zinc-700">
+                                                    <span className="text-zinc-500">Banco:</span> {pixSettings.bank_name}
+                                                </p>
+                                                <p className="font-bold text-zinc-700">
+                                                    <span className="text-zinc-500">Cidade:</span> {pixSettings.city || 'Teresina'}
+                                                </p>
+                                            </div>
+
                                             <div className="bg-primary/10 text-primary p-3 rounded-xl text-xs font-bold leading-relaxed">
-                                                ⚠️ Importante: Envie o comprovante no WhatsApp para confirmarmos seu pedido!
+                                                ⚠️ Importante: Após o pagamento, envie o comprovante no WhatsApp para confirmarmos seu pedido!
                                             </div>
                                         </div>
                                     </div>
