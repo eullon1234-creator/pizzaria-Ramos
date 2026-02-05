@@ -30,8 +30,14 @@ export default function Menu() {
                 .order('display_order')
 
             if (catErr) throw catErr
-            setCategories(cats)
-            if (cats.length > 0) setActiveCategory(cats[0].id)
+            
+            // Filtrar para remover "Pizzas Salgadas" e "Pizzas Doces"
+            const filteredCats = cats.filter(cat => 
+                !cat.name.toLowerCase().includes('pizza')
+            )
+            
+            setCategories(filteredCats)
+            if (filteredCats.length > 0) setActiveCategory(filteredCats[0].id)
 
             const { data: prods, error: prodErr } = await supabase
                 .from('products')
@@ -184,7 +190,7 @@ export default function Menu() {
                                         </button>
                                     </div>
                                 </div>
-                            </motion.div>
+                            </moti.filter(p => p.category_id === activeCategory)on.div>
                         )
                     })}
                 </div>
@@ -199,7 +205,7 @@ export default function Menu() {
             <HalfAndHalfModal
                 isOpen={isHalfModalOpen}
                 onClose={() => setIsHalfModalOpen(false)}
-                products={products.filter(p => p.category_id === activeCategory)}
+                products={products}
             />
         </section>
     )
