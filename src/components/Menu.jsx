@@ -88,7 +88,10 @@ export default function Menu() {
 
     return (
         <section className="py-12 bg-white" id="menu">
-            <div clas/* Botão "Todos" para mostrar tudo */}
+            <div className="container mx-auto px-4">
+                {/* Category Tabs */}
+                <div className="flex overflow-x-auto gap-4 mb-10 pb-2 no-scrollbar">
+                    {/* Botão "Todos" para mostrar tudo */}
                     <button
                         onClick={() => setActiveCategory(null)}
                         className={`whitespace-nowrap px-6 py-2 rounded-full font-bold transition-all border-2 ${!activeCategory
@@ -98,9 +101,6 @@ export default function Menu() {
                     >
                         Todos
                     </button>
-                    {sName="container mx-auto px-4">
-                {/* Category Tabs */}
-                <div className="flex overflow-x-auto gap-4 mb-10 pb-2 no-scrollbar">
                     {categories.map((cat) => (
                         <button
                             key={cat.id}
@@ -114,34 +114,33 @@ export default function Menu() {
                     ))}
                 </div>
 
-                {/* Meio a Meio Banner - Only for Pizzas */}
-                {isPizzaCategory && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="mb-8"
+                {/* Meio a Meio Banner - Sempre mostrar */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-8"
+                >
+                    <button
+                        onClick={() => setIsHalfModalOpen(true)}
+                        className="w-full bg-linear-to-r from-primary to-red-600 p-6 rounded-3xl text-white flex items-center justify-between group overflow-hidden relative shadow-xl shadow-primary/20 active:scale-[0.98] transition-all"
                     >
-                        <button
-                            onClick={() => setIsHalfModalOpen(true)}
-                            className="w-full bg-linear-to-r from-primary to-red-600 p-6 rounded-3xl text-white flex items-center justify-between group overflow-hidden relative shadow-xl shadow-primary/20 active:scale-[0.98] transition-all"
-                        >
-                            <div className="relative z-10 text-left">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <Sparkles className="w-5 h-5 text-secondary animate-pulse" />
-                                    <span className="text-secondary font-black uppercase tracking-[0.3em] text-[10px]">Novidade</span>
-                                </div>
-                                <h3 className="text-2xl font-black uppercase italic tracking-tighter">Montar Meio a Meio</h3>
-                                <p className="text-white/80 text-xs font-bold uppercase tracking-wider mt-1">Escolha 2 sabores em uma única pizza!</p>
+                        <div className="relative z-10 text-left">
+                            <div className="flex items-center gap-2 mb-1">
+                                <Sparkles className="w-5 h-5 text-secondary animate-pulse" />
+                                <span className="text-secondary font-black uppercase tracking-[0.3em] text-[10px]">Novidade</span>
                             </div>
-                                <Pizza className="w-10 h-10 text-white" />
-                            </div>
+                            <h3 className="text-2xl font-black uppercase italic tracking-tighter">Montar Meio a Meio</h3>
+                            <p className="text-white/80 text-xs font-bold uppercase tracking-wider mt-1">Escolha 2 sabores em uma única pizza!</p>
+                        </div>
+                        <div className="relative z-10 bg-white/20 p-4 rounded-2xl backdrop-blur-md group-hover:scale-110 transition-transform">
+                            <Pizza className="w-10 h-10 text-white" />
+                        </div>
 
-                            {/* Decorative background elements */}
-                            <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
-                            <div className="absolute -left-4 -top-4 w-24 h-24 bg-white/5 rounded-full blur-2xl" />
-                        </button>
-                    </motion.div>
-                )}
+                        {/* Decorative background elements */}
+                        <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
+                        <div className="absolute -left-4 -top-4 w-24 h-24 bg-white/5 rounded-full blur-2xl" />
+                    </button>
+                </motion.div>
 
                 {/* Product Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
