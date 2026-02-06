@@ -15,6 +15,7 @@ export default function Menu() {
     const [loading, setLoading] = useState(true)
     const [selectedProduct, setSelectedProduct] = useState(null)
     const [isHalfModalOpen, setIsHalfModalOpen] = useState(false)
+    const [pizzaCategoryIds, setPizzaCategoryIds] = useState([])
 
     const { addToCart } = useCart()
 
@@ -31,13 +32,21 @@ export default function Menu() {
 
             if (catErr) throw catErr
             
-            // Filtrar para remover "Pizzas Salgadas" e "Pizzas Doces" das ABAS
-            const filteredCats = cats.filter(cat => 
-                !cat.name.toLowerCase().includes('pizza')
-            )
+            // Pegar IDs das categorias de pizza para agrupar numa única aba
+            const pizzaCatIds = cats
+                .filter(cat => cat.name.toLowerCase().includes('pizza'))
+                .map(cat => cat.id)
             
-            setCategories(filteredCats)
+            // Remover categorias individuais de pizza e adicionar uma única "Pizzas"
+            const nonPizzaCats = cats.filter(cat => !cat.name.toLowerCase().includes('pizza'))
+            const pizzaTab = pizzaCatIds.length > 0 
+                ? [{ id: 'all-pizzas', name: 'Pizzas', display_order: 0 }] 
+                : []
+            
+            setCategories([...pizzaTab, ...nonPizzaCats])
             // Não setar categoria inicial - mostrar tudo
+            // Guardar IDs de pizza para filtrar depois
+            setPizzaCategoryIds(pizzaCatIds)
 
             const { data: prods, error: prodErr } = await supabase
                 .from('products')
@@ -79,10 +88,12 @@ export default function Menu() {
     }
 
     // Se tiver categoria ativa, filtrar por ela, senão mostrar TODOS os produtos
-    const filteredProducts = activeCategory 
-        ? products.filter(p => p.category_id === activeCategory)
-        : products
-    const isPizzaCategory = false // Nunca mostrar como pizza já que removemos as categorias
+    const filteredProducts = activeCategory === 'all-pizzas'
+        ? products.filter(p => pizzaCategoryIds.includes(p.category_id))
+        : activeCategory 
+            ? products.filter(p => p.category_id === activeCategory)
+            : products
+    const isPizzaCategory = activeCategory === 'all-pizzas' || !activeCategory
 
     if (loading) return <MenuSkeleton />
 
