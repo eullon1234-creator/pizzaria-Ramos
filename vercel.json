@@ -23,15 +23,7 @@
     ],
     "rewrites": [
         {
-            "source": "/admin",
-            "destination": "/index.html"
-        },
-        {
-            "source": "/admin/(.*)",
-            "destination": "/index.html"
-        },
-        {
-            "source": "/((?!assets|manifest.webmanifest|sw.js|workbox-.*\\.js|pwa-.*\\.png|.*\\.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|json)).*)",
+            "source": "/(.*)",
             "destination": "/index.html"
         }
     ]
