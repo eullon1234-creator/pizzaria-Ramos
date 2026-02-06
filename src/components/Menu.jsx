@@ -31,13 +31,13 @@ export default function Menu() {
 
             if (catErr) throw catErr
             
-            // Filtrar para remover "Pizzas Salgadas" e "Pizzas Doces"
+            // Filtrar para remover "Pizzas Salgadas" e "Pizzas Doces" das ABAS
             const filteredCats = cats.filter(cat => 
                 !cat.name.toLowerCase().includes('pizza')
             )
             
             setCategories(filteredCats)
-            if (filteredCats.length > 0) setActiveCategory(filteredCats[0].id)
+            // Não setar categoria inicial - mostrar tudo
 
             const { data: prods, error: prodErr } = await supabase
                 .from('products')
@@ -78,23 +78,35 @@ export default function Menu() {
         }
     }
 
-    const filteredProducts = products.filter(p => p.category_id === activeCategory)
-    const isPizzaCategory = categories.find(c => c.id === activeCategory)?.name.toLowerCase().includes('pizza')
+    // Se tiver categoria ativa, filtrar por ela, senão mostrar TODOS os produtos
+    const filteredProducts = activeCategory 
+        ? products.filter(p => p.category_id === activeCategory)
+        : products
+    const isPizzaCategory = false // Nunca mostrar como pizza já que removemos as categorias
 
     if (loading) return <MenuSkeleton />
 
     return (
         <section className="py-12 bg-white" id="menu">
-            <div className="container mx-auto px-4">
+            <div clas/* Botão "Todos" para mostrar tudo */}
+                    <button
+                        onClick={() => setActiveCategory(null)}
+                        className={`whitespace-nowrap px-6 py-2 rounded-full font-bold transition-all border-2 ${!activeCategory
+                            ? 'bg-primary border-primary text-white shadow-lg scale-105'
+                            : 'bg-zinc-100 border-transparent text-zinc-500 hover:bg-zinc-200'
+                            }`}
+                    >
+                        Todos
+                    </button>
+                    {sName="container mx-auto px-4">
                 {/* Category Tabs */}
                 <div className="flex overflow-x-auto gap-4 mb-10 pb-2 no-scrollbar">
                     {categories.map((cat) => (
                         <button
                             key={cat.id}
                             onClick={() => setActiveCategory(cat.id)}
-                            className={`whitespace-nowrap px-6 py-2 rounded-full font-bold transition-all border-2 ${activeCategory === cat.id
-                                ? 'bg-primary border-primary text-white shadow-lg scale-105'
-                                : 'bg-zinc-100 border-transparent text-zinc-500 hover:bg-zinc-200'
+                            className={`wSempre mostrar */}
+                            : 'bg-zinc-100 border-transparent text-zinc-500 hover:bg-zinc-200'
                                 }`}
                         >
                             {cat.name}
@@ -121,7 +133,6 @@ export default function Menu() {
                                 <h3 className="text-2xl font-black uppercase italic tracking-tighter">Montar Meio a Meio</h3>
                                 <p className="text-white/80 text-xs font-bold uppercase tracking-wider mt-1">Escolha 2 sabores em uma única pizza!</p>
                             </div>
-                            <div className="relative z-10 bg-white/20 p-4 rounded-2xl backdrop-blur-md group-hover:scale-110 transition-transform">
                                 <Pizza className="w-10 h-10 text-white" />
                             </div>
 
