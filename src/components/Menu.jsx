@@ -190,7 +190,7 @@ export default function Menu() {
                                         </button>
                                     </div>
                                 </div>
-                            </moti.filter(p => p.category_id === activeCategory)on.div>
+                            </motion.div>
                         )
                     })}
                 </div>
