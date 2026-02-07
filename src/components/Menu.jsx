@@ -147,7 +147,7 @@ export default function Menu() {
         <section className="py-12 bg-white" id="menu">
             <div className="container mx-auto px-4">
                 {/* Category Tabs */}
-                <div className="flex overflow-x-auto gap-4 mb-10 pb-2 no-scrollbar">
+                <div className="flex overflow-x-auto gap-4 mb-8 pb-4 pt-2 no-scrollbar">
                     {/* Botão "Todos" para mostrar tudo */}
                     <motion.button
                         onClick={() => setActiveCategory(null)}
@@ -180,7 +180,7 @@ export default function Menu() {
                             )}
                         </span>
                         {/* Ping animation - bolinha piscando */}
-                        <span className="absolute top-0 right-0 flex h-3 w-3 -mr-1 -mt-1">
+                        <span className="absolute -top-1 -right-1 flex h-3 w-3">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
                         </span>
