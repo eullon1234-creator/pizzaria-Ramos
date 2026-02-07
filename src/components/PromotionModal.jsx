@@ -340,55 +340,106 @@ export default function PromotionModal({ isOpen, onClose }) {
                             </h3>
 
                             {activePromotions.length === 0 ? (
-                                <p className="text-center text-zinc-500 py-8">
-                                    Nenhuma promoção ativa no momento
-                                </p>
+                                <div className="text-center py-12">
+                                    <div className="bg-white rounded-xl p-8 shadow-sm">
+                                        <Tag className="w-16 h-16 text-zinc-300 mx-auto mb-4" />
+                                        <p className="text-zinc-500 font-medium">Nenhuma promoção ativa no momento</p>
+                                        <p className="text-zinc-400 text-sm mt-2">Crie sua primeira promoção acima!</p>
+                                    </div>
+                                </div>
                             ) : (
-                                <div className="grid gap-3">
-                                    {activePromotions.map((promo) => (
-                                        <motion.div
-                                            key={promo.id}
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            className="bg-white p-4 rounded-lg shadow-md flex items-center justify-between"
-                                        >
-                                            <div className="flex-1">
-                                                <h4 className="font-bold text-lg text-zinc-800">
-                                                    {promo.products.name}
-                                                </h4>
-                                                <div className="flex items-center gap-4 mt-2 text-sm text-zinc-600">
-                                                    <span className="flex items-center gap-1">
-                                                        <Percent className="w-4 h-4 text-primary" />
-                                                        <strong className="text-primary">{promo.discount_percentage}% OFF</strong>
-                                                    </span>
-                                                    <span className="flex items-center gap-1">
-                                                        <Calendar className="w-4 h-4" />
-                                                        Até {formatDate(promo.end_date)}
-                                                    </span>
-                                                    <span className="flex items-center gap-1">
-                                                        <Clock className="w-4 h-4" />
-                                                        {getDaysRemaining(promo.end_date)} dias restantes
-                                                    </span>
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    {activePromotions.map((promo) => {
+                                        const daysLeft = getDaysRemaining(promo.end_date);
+                                        const totalDays = Math.ceil((new Date(promo.end_date) - new Date(promo.start_date)) / (1000 * 60 * 60 * 24));
+                                        const progressPercent = Math.max(0, Math.min(100, (daysLeft / totalDays) * 100));
+                                        
+                                        return (
+                                            <motion.div
+                                                key={promo.id}
+                                                initial={{ opacity: 0, scale: 0.95 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                className="bg-white rounded-xl shadow-lg overflow-hidden border-2 border-zinc-100 hover:border-primary/20 hover:shadow-xl transition-all"
+                                            >
+                                                {/* Header com Badge de Desconto */}
+                                                <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-4 flex items-center justify-between">
+                                                    <div>
+                                                        <h4 className="font-black text-white text-lg">
+                                                            {promo.products.name}
+                                                        </h4>
+                                                        <p className="text-white/90 text-xs font-bold uppercase tracking-wider">
+                                                            Produto em Promoção
+                                                        </p>
+                                                    </div>
+                                                    <div className="bg-white text-primary text-3xl font-black px-4 py-2 rounded-lg shadow-lg">
+                                                        {promo.discount_percentage}%
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => handleEditPromotion(promo)}
-                                                    className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
-                                                    title="Editar"
-                                                >
-                                                    <Edit className="w-5 h-5" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeletePromotion(promo.id)}
-                                                    className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
-                                                    title="Remover"
-                                                >
-                                                    <Trash2 className="w-5 h-5" />
-                                                </button>
-                                            </div>
-                                        </motion.div>
-                                    ))}
+
+                                                {/* Informações */}
+                                                <div className="p-4 space-y-3">
+                                                    {/* Desconto */}
+                                                    <div className="flex items-center gap-2 text-primary">
+                                                        <Percent className="w-5 h-5" />
+                                                        <span className="font-bold text-lg">
+                                                            {promo.discount_percentage}% de desconto
+                                                        </span>
+                                                    </div>
+
+                                                    {/* Validade */}
+                                                    <div className="flex items-center gap-2 text-zinc-600">
+                                                        <Calendar className="w-4 h-4" />
+                                                        <span className="text-sm">
+                                                            Válido até <strong>{formatDate(promo.end_date)}</strong>
+                                                        </span>
+                                                    </div>
+
+                                                    {/* Tempo Restante */}
+                                                    <div className="space-y-2">
+                                                        <div className="flex items-center justify-between text-sm">
+                                                            <span className="flex items-center gap-1 text-zinc-600">
+                                                                <Clock className="w-4 h-4" />
+                                                                Tempo restante
+                                                            </span>
+                                                            <span className={`font-bold ${daysLeft > 3 ? 'text-green-600' : daysLeft > 1 ? 'text-yellow-600' : 'text-red-600'}`}>
+                                                                {daysLeft} {daysLeft === 1 ? 'dia' : 'dias'}
+                                                            </span>
+                                                        </div>
+                                                        
+                                                        {/* Barra de Progresso */}
+                                                        <div className="w-full bg-zinc-200 rounded-full h-2 overflow-hidden">
+                                                            <div 
+                                                                className={`h-full transition-all duration-300 ${
+                                                                    progressPercent > 50 ? 'bg-green-500' : 
+                                                                    progressPercent > 25 ? 'bg-yellow-500' : 
+                                                                    'bg-red-500'
+                                                                }`}
+                                                                style={{ width: `${progressPercent}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Botões de Ação */}
+                                                <div className="p-4 bg-zinc-50 border-t border-zinc-200 flex gap-2">
+                                                    <button
+                                                        onClick={() => handleEditPromotion(promo)}
+                                                        className="flex-1 flex items-center justify-center gap-2 bg-blue-500 text-white font-bold py-3 rounded-lg hover:bg-blue-600 transition-all shadow-md hover:shadow-lg"
+                                                    >
+                                                        <Edit className="w-5 h-5" />
+                                                        Editar
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeletePromotion(promo.id)}
+                                                        className="flex-1 flex items-center justify-center gap-2 bg-red-500 text-white font-bold py-3 rounded-lg hover:bg-red-600 transition-all shadow-md hover:shadow-lg"
+                                                    >
+                                                        <Trash2 className="w-5 h-5" />
+                                                        Remover
+                                                    </button>
+                                                </div>
+                                            </motion.div>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
