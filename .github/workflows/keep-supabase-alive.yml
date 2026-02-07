@@ -2,8 +2,8 @@ name: Manter Supabase Ativo
 
 on:
   schedule:
-    # Executa a cada 6 dias às 8h (UTC)
-    - cron: '0 8 */6 * *'
+    # Executa a cada 3 dias às 8h (UTC)
+    - cron: '0 8 */3 * *'
   workflow_dispatch: # Permite executar manualmente
 
 jobs:
@@ -26,4 +26,4 @@ jobs:
       - name: Verificar status
         run: |
           echo "📊 Status: Supabase mantido ativo"
-          echo "🕐 Próxima execução em 6 dias"
+          echo "🕐 Próxima execução em 3 dias"
