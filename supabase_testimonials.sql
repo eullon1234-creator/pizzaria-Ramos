@@ -23,6 +23,11 @@ CREATE POLICY "Permitir leitura pública de depoimentos ativos"
 ON testimonials FOR SELECT
 USING (is_active = true);
 
+-- Permitir INSERT público (depoimentos criados como inativos)
+CREATE POLICY "Permitir criação pública de depoimentos"
+ON testimonials FOR INSERT
+WITH CHECK (is_active = false);
+
 -- Permitir todas operações para usuários autenticados (admin)
 CREATE POLICY "Admin total access"
 ON testimonials FOR ALL

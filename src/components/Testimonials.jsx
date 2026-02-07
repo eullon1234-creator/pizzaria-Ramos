@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Star, Quote } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import { Star, Quote, Edit3 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import TestimonialFormModal from './TestimonialFormModal';
 
 export default function Testimonials() {
     const [testimonials, setTestimonials] = useState([])
-    const [loading, setLoading] = useState(true)
-
+    const [loading, setLoading] = useState(true)  const [formModalOpen, setFormModalOpen] = useState(false);
     useEffect(() => {
         fetchTestimonials()
     }, [])
@@ -135,6 +135,23 @@ export default function Testimonials() {
                     ))}
                 </div>
 
+                {/* Botão Deixe seu Depoimento */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.5, duration: 0.6 }}
+                    className="text-center mt-12"
+                >
+                    <button
+                        onClick={() => setFormModalOpen(true)}
+                        className="inline-flex items-center gap-2 bg-white hover:bg-gray-50 text-primary font-bold px-8 py-4 rounded-xl border-2 border-primary uppercase tracking-wider transition-all hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl"
+                    >
+                        <Edit3 size={20} />
+                        Deixe seu Depoimento
+                    </button>
+                </motion.div>
+
                 {/* CTA Below Testimonials */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -154,6 +171,12 @@ export default function Testimonials() {
                     </a>
                 </motion.div>
             </div>
+
+            {/* Modal de Formulário */}
+            <TestimonialFormModal 
+                isOpen={formModalOpen}
+                onClose={() => setFormModalOpen(false)}
+            />
         </section>
     )
 }
