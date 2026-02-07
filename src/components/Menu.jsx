@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { Plus, Info, Pizza, Sparkles } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import SizePicker from './SizePicker'
 import HalfAndHalfModal from './HalfAndHalfModal'
 import { useCart } from '../context/CartContext'
@@ -103,25 +103,30 @@ export default function Menu() {
                 {/* Category Tabs */}
                 <div className="flex overflow-x-auto gap-4 mb-10 pb-2 no-scrollbar">
                     {/* Botão "Todos" para mostrar tudo */}
-                    <button
+                    <motion.button
                         onClick={() => setActiveCategory(null)}
+                        whileTap={{ scale: 0.95 }}
+                        whileHover={{ scale: 1.05 }}
                         className={`whitespace-nowrap px-6 py-2 rounded-full font-bold transition-all border-2 ${!activeCategory
-                            ? 'bg-primary border-primary text-white shadow-lg scale-105'
+                            ? 'bg-primary border-primary text-white shadow-lg'
                             : 'bg-zinc-100 border-transparent text-zinc-500 hover:bg-zinc-200'
                             }`}
                     >
                         Todos
-                    </button>
+                    </motion.button>
                     {categories.map((cat) => (
-                        <button
+                        <motion.button
                             key={cat.id}
                             onClick={() => setActiveCategory(cat.id)}
-                            className={`wSempre mostrar */}
-                            : 'bg-zinc-100 border-transparent text-zinc-500 hover:bg-zinc-200'
+                            whileTap={{ scale: 0.95 }}
+                            whileHover={{ scale: 1.05 }}
+                            className={`whitespace-nowrap px-6 py-2 rounded-full font-bold transition-all border-2 ${activeCategory === cat.id
+                                ? 'bg-primary border-primary text-white shadow-lg'
+                                : 'bg-zinc-100 border-transparent text-zinc-500 hover:bg-zinc-200'
                                 }`}
                         >
                             {cat.name}
-                        </button>
+                        </motion.button>
                     ))}
                 </div>
 
@@ -154,8 +159,14 @@ export default function Menu() {
                 </motion.div>
 
                 {/* Product Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {filteredProducts.map((product) => {
+                <motion.div 
+                    key={activeCategory || 'all'}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+                >
+                    {filteredProducts.map((product, index) => {
                         const prices = product.product_prices.map(p => p.price)
                         const minPrice = prices.length > 0 ? Math.min(...prices) : 0
 
@@ -164,7 +175,11 @@ export default function Menu() {
                                 key={product.id}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.3 }}
+                                transition={{ 
+                                    duration: 0.4,
+                                    delay: index * 0.05,
+                                    ease: "easeOut"
+                                }}
                                 className="group bg-white rounded-2xl overflow-hidden shadow-md border border-zinc-100 hover:shadow-xl transition-all hover:-translate-y-1"
                             >
                                 <div className="relative h-48 overflow-hidden bg-zinc-100">
@@ -214,7 +229,7 @@ export default function Menu() {
                             </motion.div>
                         )
                     })}
-                </div>
+                </motion.div>
             </div>
 
             <SizePicker
