@@ -9,6 +9,8 @@ export default function PromotionModal({ isOpen, onClose }) {
     const [selectedProduct, setSelectedProduct] = useState('');
     const [discountPercentage, setDiscountPercentage] = useState(20);
     const [durationDays, setDurationDays] = useState(7);
+    const [durationType, setDurationType] = useState('days'); // 'days' ou 'datetime'
+    const [endDateTime, setEndDateTime] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -90,13 +92,32 @@ export default function PromotionModal({ isOpen, onClose }) {
             return;
         }
 
+        // Validar data/hora se escolher opção específica
+        if (durationType === 'datetime') {
+            if (!endDateTime) {
+                setError('⚠️ Escolha a data e hora de término da promoção');
+                return;
+            }
+            const selectedDate = new Date(endDateTime);
+            if (selectedDate <= new Date()) {
+                setError('⚠️ Data de término deve ser no futuro');
+                return;
+            }
+        }
+
         setLoading(true);
         setError('');
         setSuccess('');
 
         try {
-            const endDate = new Date();
-            endDate.setDate(endDate.getDate() + durationDays);
+            // Calcular end_date baseado na escolha do usuário
+            let endDate;
+            if (durationType === 'datetime') {
+                endDate = new Date(endDateTime);
+            } else {
+                endDate = new Date();
+                endDate.setDate(endDate.getDate() + durationDays);
+            }
 
             const promotionData = {
                 product_id: selectedProduct.trim(), // Remove espaços extras
@@ -140,6 +161,8 @@ export default function PromotionModal({ isOpen, onClose }) {
             setSelectedProduct('');
             setDiscountPercentage(20);
             setDurationDays(7);
+            setDurationType('days');
+            setEndDateTime('');
             setEditingPromo(null);
             
             // Atualizar lista
@@ -182,6 +205,16 @@ export default function PromotionModal({ isOpen, onClose }) {
         // Calcular dias restantes
         const daysLeft = Math.ceil((new Date(promo.end_date) - new Date()) / (1000 * 60 * 60 * 24));
         setDurationDays(Math.max(1, daysLeft));
+        
+        // Configurar data/hora para edição
+        const endDate = new Date(promo.end_date);
+        const localDateTime = new Date(endDate.getTime() - endDate.getTimezoneOffset() * 60000)
+            .toISOString()
+            .slice(0, 16);
+        setEndDateTime(localDateTime);
+        
+        // Manter tipo como datetime ao editar
+        setDurationType('datetime');
     };
 
     const formatDate = (dateString) => {
@@ -313,36 +346,101 @@ export default function PromotionModal({ isOpen, onClose }) {
                                     </p>
                                 </div>
 
-                                {/* Duração */}
+                                {/* Duração / Data de Término */}
                                 <div>
-                                    <label className="block text-sm font-bold text-zinc-700 mb-2">
-                                        Duração (dias)
+                                    <label className="block text-sm font-bold text-zinc-700 mb-3">
+                                        Término da Promoção
                                     </label>
-                                    <div className="grid grid-cols-4 gap-2">
-                                        {[1, 3, 7, 15, 30].map((days) => (
-                                            <button
-                                                key={days}
-                                                type="button"
-                                                onClick={() => setDurationDays(days)}
-                                                className={`px-4 py-2 rounded-lg font-bold transition-all ${
-                                                    durationDays === days
-                                                        ? 'bg-primary text-white'
-                                                        : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
-                                                }`}
-                                            >
-                                                {days} {days === 1 ? 'dia' : 'dias'}
-                                            </button>
-                                        ))}
+                                    
+                                    {/* Toggle entre Duração e Data Específica */}
+                                    <div className="flex gap-2 mb-4">
+                                        <button
+                                            type="button"
+                                            onClick={() => setDurationType('days')}
+                                            className={`flex-1 py-2 px-4 rounded-lg font-bold transition-all ${
+                                                durationType === 'days'
+                                                    ? 'bg-primary text-white shadow-lg'
+                                                    : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                                            }`}
+                                        >
+                                            ⏱️ Duração (dias)
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setDurationType('datetime')}
+                                            className={`flex-1 py-2 px-4 rounded-lg font-bold transition-all ${
+                                                durationType === 'datetime'
+                                                    ? 'bg-primary text-white shadow-lg'
+                                                    : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                                            }`}
+                                        >
+                                            📅 Data/Hora Específica
+                                        </button>
                                     </div>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max="365"
-                                        value={durationDays}
-                                        onChange={(e) => setDurationDays(parseInt(e.target.value))}
-                                        className="w-full mt-2 px-4 py-2 border-2 border-zinc-200 rounded-lg focus:border-primary focus:outline-none"
-                                        placeholder="Ou digite a quantidade de dias"
-                                    />
+
+                                    {/* Opção: Duração em Dias */}
+                                    {durationType === 'days' && (
+                                        <div className="space-y-2">
+                                            <div className="grid grid-cols-5 gap-2">
+                                                {[1, 3, 7, 15, 30].map((days) => (
+                                                    <button
+                                                        key={days}
+                                                        type="button"
+                                                        onClick={() => setDurationDays(days)}
+                                                        className={`px-3 py-2 rounded-lg font-bold transition-all ${
+                                                            durationDays === days
+                                                                ? 'bg-primary text-white'
+                                                                : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
+                                                        }`}
+                                                    >
+                                                        {days}d
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max="365"
+                                                value={durationDays}
+                                                onChange={(e) => setDurationDays(parseInt(e.target.value))}
+                                                className="w-full px-4 py-2 border-2 border-zinc-200 rounded-lg focus:border-primary focus:outline-none"
+                                                placeholder="Ou digite a quantidade de dias"
+                                            />
+                                            <p className="text-xs text-zinc-500">
+                                                📌 A promoção expira após {durationDays} {durationDays === 1 ? 'dia' : 'dias'}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* Opção: Data e Hora Específica */}
+                                    {durationType === 'datetime' && (
+                                        <div className="space-y-2">
+                                            <input
+                                                type="datetime-local"
+                                                value={endDateTime}
+                                                onChange={(e) => setEndDateTime(e.target.value)}
+                                                min={new Date().toISOString().slice(0, 16)}
+                                                className="w-full px-4 py-3 border-2 border-zinc-200 rounded-lg focus:border-primary focus:outline-none text-lg font-medium"
+                                                required={durationType === 'datetime'}
+                                            />
+                                            {endDateTime && (
+                                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                                    <p className="text-sm font-bold text-blue-900">
+                                                        📅 Promoção expira em:
+                                                    </p>
+                                                    <p className="text-blue-700 font-medium mt-1">
+                                                        {new Date(endDateTime).toLocaleString('pt-BR', {
+                                                            dateStyle: 'full',
+                                                            timeStyle: 'short'
+                                                        })}
+                                                    </p>
+                                                </div>
+                                            )}
+                                            <p className="text-xs text-zinc-500">
+                                                ⏰ Escolha exatamente quando a promoção deve terminar
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Botões */}
