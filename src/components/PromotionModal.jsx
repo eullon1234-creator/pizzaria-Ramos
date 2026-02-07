@@ -83,7 +83,7 @@ export default function PromotionModal({ isOpen, onClose }) {
             endDate.setDate(endDate.getDate() + durationDays);
 
             const promotionData = {
-                product_id: parseInt(selectedProduct),
+                product_id: selectedProduct, // UUID string, não precisa parseInt
                 discount_percentage: discountPercentage,
                 end_date: endDate.toISOString(),
                 is_active: true,
