@@ -90,10 +90,26 @@ export default function Menu() {
             product.name.toLowerCase().includes('bebida') ||
             product.category_id === 'bebidas' // Adjust if you know the ID, but name check is safer for now
 
+        // 🔥 Verificar se produto está em promoção e aplicar desconto
+        const promotion = getProductPromotion(product.id)
+        let productToAdd = product
+
+        if (promotion) {
+            // Criar cópia do produto com preços promocionais
+            productToAdd = {
+                ...product,
+                product_prices: product.product_prices.map(variation => ({
+                    ...variation,
+                    originalPrice: variation.price, // Guardar preço original
+                    price: calculateDiscountPrice(variation.price, promotion.discount_percentage) // Aplicar desconto
+                }))
+            }
+        }
+
         if (product.product_prices.length > 1 || isBeverage) {
-            setSelectedProduct(product)
+            setSelectedProduct(productToAdd)
         } else {
-            addToCart(product, product.product_prices[0])
+            addToCart(productToAdd, productToAdd.product_prices[0])
         }
     }
 

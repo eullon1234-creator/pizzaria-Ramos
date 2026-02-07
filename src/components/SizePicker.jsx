@@ -119,7 +119,16 @@ export default function SizePicker({ product, isOpen, onClose }) {
                                                 <span className="font-bold text-lg text-zinc-900">{variation.size}</span>
                                             </div>
                                         </div>
-                                        <span className="font-black text-primary text-xl tracking-tighter">R$ {variation.price.toFixed(2)}</span>
+                                        <div className="flex flex-col items-end gap-1">
+                                            {variation.originalPrice && (
+                                                <span className="text-sm font-semibold text-zinc-400 line-through">
+                                                    R$ {variation.originalPrice.toFixed(2)}
+                                                </span>
+                                            )}
+                                            <span className="font-black text-primary text-xl tracking-tighter">
+                                                R$ {variation.price.toFixed(2)}
+                                            </span>
+                                        </div>
                                     </button>
                                 ))}
                             </div>
