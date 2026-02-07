@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { Plus, Info, Pizza, Sparkles } from 'lucide-react'
+import { Plus, Info, Pizza, Sparkles, Flame, Star, Eye } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import SizePicker from './SizePicker'
 import HalfAndHalfModal from './HalfAndHalfModal'
@@ -169,6 +169,15 @@ export default function Menu() {
                     {filteredProducts.map((product, index) => {
                         const prices = product.product_prices.map(p => p.price)
                         const minPrice = prices.length > 0 ? Math.min(...prices) : 0
+                        
+                        // Lógica simples: produtos mais baratos ou com nome específico são "mais vendidos"
+                        const isBestSeller = product.name.toLowerCase().includes('calabresa') || 
+                                            product.name.toLowerCase().includes('mussarela') ||
+                                            product.name.toLowerCase().includes('frango')
+                        
+                        // Produtos criados nos últimos 30 dias são "novos"
+                        const isNew = product.created_at && 
+                                     (new Date() - new Date(product.created_at)) < 30 * 24 * 60 * 60 * 1000
 
                         return (
                             <motion.div 
@@ -180,45 +189,78 @@ export default function Menu() {
                                     delay: index * 0.05,
                                     ease: "easeOut"
                                 }}
-                                className="group bg-white rounded-2xl overflow-hidden shadow-md border border-zinc-100 hover:shadow-xl transition-all hover:-translate-y-1"
+                                className="group bg-gradient-to-br from-white to-zinc-50 rounded-2xl overflow-hidden shadow-md border border-zinc-100 hover:shadow-2xl hover:border-primary/20 transition-all hover:-translate-y-2 relative"
                             >
+                                {/* Badges */}
+                                <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
+                                    {isBestSeller && (
+                                        <motion.div
+                                            initial={{ scale: 0, rotate: -45 }}
+                                            animate={{ scale: 1, rotate: 0 }}
+                                            transition={{ delay: index * 0.05 + 0.2, type: "spring" }}
+                                            className="flex items-center gap-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-black px-3 py-1.5 rounded-full shadow-lg uppercase"
+                                        >
+                                            <Flame className="w-3.5 h-3.5" />
+                                            Mais Vendido
+                                        </motion.div>
+                                    )}
+                                    {isNew && (
+                                        <motion.div
+                                            initial={{ scale: 0, rotate: 45 }}
+                                            animate={{ scale: 1, rotate: 0 }}
+                                            transition={{ delay: index * 0.05 + 0.3, type: "spring" }}
+                                            className="flex items-center gap-1 bg-gradient-to-r from-green-400 to-emerald-500 text-white text-xs font-black px-3 py-1.5 rounded-full shadow-lg uppercase"
+                                        >
+                                            <Sparkles className="w-3.5 h-3.5" />
+                                            Novo
+                                        </motion.div>
+                                    )}
+                                </div>
+
                                 <div className="relative h-48 overflow-hidden bg-zinc-100">
                                     {product.image_url ? (
                                         <img 
                                             src={product.image_url} 
                                             alt={product.name} 
-                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
                                             loading="lazy"
                                             width="256"
                                             height="192"
                                         />
                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-zinc-300">
+                                        <div className="w-full h-full flex items-center justify-center text-zinc-300 bg-gradient-to-br from-zinc-100 to-zinc-200">
                                             <Pizza className="w-12 h-12" />
                                         </div>
                                     )}
-                                    <div className="absolute top-4 right-4 bg-primary text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+                                    
+                                    {/* Overlay escuro no hover */}
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
+                                    
+                                    {/* Preço badge */}
+                                    <div className="absolute bottom-4 right-4 bg-primary text-white text-sm font-black px-4 py-2 rounded-xl shadow-xl group-hover:scale-110 transition-transform">
                                         {product.product_prices.length > 1 ? 'A partir de ' : ''} R$ {minPrice.toFixed(2)}
                                     </div>
                                 </div>
 
                                 <div className="p-6">
-                                    <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">{product.name}</h3>
-                                    <p className="text-zinc-600 text-sm mb-6 line-clamp-2">{product.description}</p>
+                                    <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors line-clamp-1">{product.name}</h3>
+                                    <p className="text-zinc-600 text-sm mb-6 line-clamp-2 leading-relaxed">{product.description}</p>
 
-                                    <div className="flex items-center justify-between mt-auto">
-                                           <button 
+                                    <div className="flex items-center gap-3">
+                                        <button 
                                             onClick={() => {
                                                 alert(`${product.name}\n\n${product.description}\n\nPreço: R$ ${minPrice.toFixed(2)}${product.product_prices.length > 1 ? ' ou mais' : ''}`)
                                             }}
-                                            className="text-zinc-400 hover:text-primary transition-colors"
+                                            className="flex items-center gap-2 text-zinc-500 hover:text-primary transition-colors px-3 py-2 rounded-lg hover:bg-primary/5"
                                             aria-label={`Ver informações de ${product.name}`}
                                         >
-                                            <Info className="w-5 h-5" />
+                                            <Eye className="w-4 h-4" />
+                                            <span className="text-sm font-medium">Detalhes</span>
                                         </button>
-                                <button
+                                        
+                                        <button
                                             onClick={() => handleOrderClick(product)}
-                                            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg font-bold hover:bg-red-900 transition-colors shadow-md active:scale-95"
+                                            className="flex-1 flex items-center justify-center gap-2 bg-primary text-white px-4 py-3 rounded-xl font-bold hover:bg-red-700 transition-all shadow-lg hover:shadow-xl active:scale-95"
                                             aria-label={`Adicionar ${product.name} ao carrinho`}
                                         >
                                             <Plus className="w-5 h-5" />
@@ -226,6 +268,9 @@ export default function Menu() {
                                         </button>
                                     </div>
                                 </div>
+                                
+                                {/* Shine effect on hover */}
+                                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/0 to-transparent group-hover:via-white/20 transition-all duration-700 pointer-events-none" />
                             </motion.div>
                         )
                     })}
