@@ -11,6 +11,7 @@ import MenuSkeleton from './MenuSkeleton'
 export default function Menu() {
     const [categories, setCategories] = useState([])
     const [products, setProducts] = useState([])
+    const [promotions, setPromotions] = useState([])
     const [activeCategory, setActiveCategory] = useState(null)
     const [loading, setLoading] = useState(true)
     const [selectedProduct, setSelectedProduct] = useState(null)
@@ -58,6 +59,15 @@ export default function Menu() {
 
             if (prodErr) throw prodErr
 
+            // Buscar promoções ativas
+            const { data: promos } = await supabase
+                .from('promotions')
+                .select('*')
+                .eq('is_active', true)
+                .gte('end_date', new Date().toISOString())
+            
+            setPromotions(promos || [])
+
             // Optimize image URLs
             const optimizedProds = prods.map(p => {
                 if (p.image_url) {
@@ -87,32 +97,31 @@ export default function Menu() {
         }
     }
 
+    // Função para verificar se produto tem promoção ativa
+    const getProductPromotion = (productId) => {
+        return promotions.find(promo => 
+            promo.product_id === productId && 
+            promo.is_active && 
+            new Date(promo.end_date) > new Date()
+        )
+    }
+
+    // Função para calcular preço com desconto
+    const calculateDiscountPrice = (originalPrice, discountPercentage) => {
+        return originalPrice * (1 - discountPercentage / 100)
+    }
+
     // Se tiver categoria ativa, filtrar por ela, senão mostrar TODOS os produtos
     const filteredProducts = activeCategory === 'all-pizzas'
         ? products.filter(p => pizzaCategoryIds.includes(p.category_id))
         : activeCategory === 'promocao'
-            ? products.filter(p => {
-                // Produtos em promoção: preço abaixo de R$ 35 ou sabores populares
-                const prices = p.product_prices.map(pp => pp.price)
-                const minPrice = prices.length > 0 ? Math.min(...prices) : 999
-                return p.name.toLowerCase().includes('calabresa') ||
-                       p.name.toLowerCase().includes('mussarela') ||
-                       p.name.toLowerCase().includes('frango') ||
-                       minPrice < 35
-              })
+            ? products.filter(p => getProductPromotion(p.id) !== undefined)
             : activeCategory 
                 ? products.filter(p => p.category_id === activeCategory)
                 : products
     
-    // Contar produtos em promoção
-    const promoCount = products.filter(p => {
-        const prices = p.product_prices.map(pp => pp.price)
-        const minPrice = prices.length > 0 ? Math.min(...prices) : 999
-        return p.name.toLowerCase().includes('calabresa') ||
-               p.name.toLowerCase().includes('mussarela') ||
-               p.name.toLowerCase().includes('frango') ||
-               minPrice < 35
-    }).length
+    // Contar produtos em promoção (baseado em promoções ativas do banco)
+    const promoCount = products.filter(p => getProductPromotion(p.id) !== undefined).length
     
     const isPizzaCategory = activeCategory === 'all-pizzas' || !activeCategory
 
@@ -216,11 +225,10 @@ export default function Menu() {
                         const prices = product.product_prices.map(p => p.price)
                         const minPrice = prices.length > 0 ? Math.min(...prices) : 0
                         
-                        // Produto em promoção
-                        const isPromo = product.name.toLowerCase().includes('calabresa') ||
-                                       product.name.toLowerCase().includes('mussarela') ||
-                                       product.name.toLowerCase().includes('frango') ||
-                                       minPrice < 35
+                        // Verificar se produto tem promoção ativa
+                        const activePromotion = getProductPromotion(product.id)
+                        const isPromo = activePromotion !== undefined
+                        const discountedPrice = isPromo ? calculateDiscountPrice(minPrice, activePromotion.discount_percentage) : minPrice
                         
                         // Lógica simples: produtos mais baratos ou com nome específico são "mais vendidos"
                         const isBestSeller = product.name.toLowerCase().includes('calabresa') || 
@@ -298,9 +306,29 @@ export default function Menu() {
                                     {/* Overlay escuro no hover */}
                                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
                                     
-                                    {/* Preço badge */}
-                                    <div className="absolute bottom-4 right-4 bg-primary text-white text-sm font-black px-4 py-2 rounded-xl shadow-xl group-hover:scale-110 transition-transform">
-                                        {product.product_prices.length > 1 ? 'A partir de ' : ''} R$ {minPrice.toFixed(2)}
+                                    {/* Preço badge com desconto */}
+                                    <div className="absolute bottom-4 right-4 z-10">
+                                        {isPromo ? (
+                                            <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-3 rounded-xl shadow-2xl group-hover:scale-110 transition-transform">
+                                                {/* Preço original cortado */}
+                                                <div className="text-xs font-bold line-through opacity-90">
+                                                    {product.product_prices.length > 1 ? 'De ' : ''}R$ {minPrice.toFixed(2)}
+                                                </div>
+                                                {/* Preço promocional em destaque */}
+                                                <div className="text-lg font-black flex items-baseline gap-1">
+                                                    <span className="text-xs">R$</span>
+                                                    <span>{discountedPrice.toFixed(2)}</span>
+                                                </div>
+                                                {/* Percentual de desconto */}
+                                                <div className="text-[10px] font-black uppercase tracking-wider mt-0.5">
+                                                    {activePromotion.discount_percentage}% OFF
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="bg-primary text-white text-sm font-black px-4 py-2 rounded-xl shadow-xl group-hover:scale-110 transition-transform">
+                                                {product.product_prices.length > 1 ? 'A partir de ' : ''} R$ {minPrice.toFixed(2)}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 

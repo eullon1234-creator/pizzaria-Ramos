@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { Plus, Edit, Trash2, Power, Pizza, LayoutDashboard, LogOut, ChevronRight, Clock, MapPin, User, CircleCheck, CheckCircle2, Package, Truck, CircleX, Bell, QrCode, DollarSign, Save, Upload, TrendingUp, Search, MessageCircle, Filter, Star } from 'lucide-react'
+import { Plus, Edit, Trash2, Power, Pizza, LayoutDashboard, LogOut, ChevronRight, Clock, MapPin, User, CircleCheck, CheckCircle2, Package, Truck, CircleX, Bell, QrCode, DollarSign, Save, Upload, TrendingUp, Search, MessageCircle, Filter, Star, Tag } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import ProductModal from '../components/ProductModal'
 import CategoryModal from '../components/CategoryModal'
@@ -8,6 +8,7 @@ import PixSettingsModal from '../components/PixSettingsModal'
 import BusinessHoursModal from '../components/BusinessHoursModal'
 import StatsDashboard from '../components/StatsDashboard'
 import TestimonialsModal from '../components/TestimonialsModal'
+import PromotionModal from '../components/PromotionModal'
 
 export default function AdminDashboard() {
     const [view, setView] = useState('stats') // Ver estatísticas primeiro ao entrar na gerência
@@ -20,6 +21,7 @@ export default function AdminDashboard() {
     const [pixModalOpen, setPixModalOpen] = useState(false)
     const [businessHoursModalOpen, setBusinessHoursModalOpen] = useState(false)
     const [testimonialsModalOpen, setTestimonialsModalOpen] = useState(false)
+    const [promotionModalOpen, setPromotionModalOpen] = useState(false)
     const [editingProduct, setEditingProduct] = useState(null)
     const [editingCategory, setEditingCategory] = useState(null)
     const [flavors, setFlavors] = useState([])
@@ -445,6 +447,13 @@ export default function AdminDashboard() {
                     >
                         <Star className="w-5 h-5" />
                         Gerenciar Depoimentos
+                    </button>
+                    <button
+                        onClick={() => setPromotionModalOpen(true)}
+                        className="w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all bg-gradient-to-r from-yellow-400/10 to-orange-500/10 text-yellow-500 hover:from-yellow-400/20 hover:to-orange-500/20 border border-yellow-500/20"
+                    >
+                        <Tag className="w-5 h-5" />
+                        🔥 Gerenciar Promoções
                     </button>
                     <button
                         onClick={() => setView('pix')}
@@ -1098,6 +1107,13 @@ export default function AdminDashboard() {
                     <TestimonialsModal
                         isOpen={testimonialsModalOpen}
                         onClose={() => setTestimonialsModalOpen(false)}
+                    />
+                )}
+
+                {promotionModalOpen && (
+                    <PromotionModal
+                        isOpen={promotionModalOpen}
+                        onClose={() => setPromotionModalOpen(false)}
                     />
                 )}
             </main>
