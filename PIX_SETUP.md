@@ -165,6 +165,7 @@ Documentação/
 | PIX_DIAGRAMS.md | 20 min | Ver diagramas |
 | PIX_TESTING_GUIDE.md | 40 min | Testar |
 | SUMMARY.md | 5 min | Resumo |
+| **SUPABASE_KEEP_ALIVE.md** | **5 min** | **Manter DB ativo** 🔄 |
 
 👉 **Leia [INDEX.md](INDEX.md) primeiro!**
 
@@ -187,6 +188,22 @@ npm run preview  # Preview build
 - ✅ Políticas RLS
 - ✅ Validações
 - ✅ Env vars protegidas
+
+---
+
+## 🔄 Manter Supabase Ativo - GRÁTIS
+
+**Problema:** Supabase pausa projetos gratuitos após 7 dias de inatividade.  
+**Solução:** GitHub Actions automático mantém seu projeto sempre ativo!
+
+### Setup Rápido (5 min)
+1. Adicione 2 secrets no GitHub (Settings → Secrets):
+   - `SUPABASE_URL`
+   - `SUPABASE_ANON_KEY`
+2. Ative GitHub Actions no repositório
+3. Pronto! Executa automaticamente a cada 6 dias
+
+👉 **Guia completo:** [SUPABASE_KEEP_ALIVE.md](SUPABASE_KEEP_ALIVE.md)
 
 ---
 

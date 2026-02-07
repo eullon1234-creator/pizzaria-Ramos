@@ -100,7 +100,30 @@ npm run dev
 - Proteção de rotas administrativas
 - Sessão gerenciada pelo Supabase Auth
 
-## 📞 Integração WhatsApp
+## � Manter Supabase Ativo (GRÁTIS)
+
+⚠️ **Importante**: Projetos Supabase gratuitos pausam após 7 dias de inatividade.
+
+✅ **Solução**: GitHub Actions automático mantém seu projeto sempre ativo!
+
+### Setup Rápido (5 minutos):
+1. **Adicione secrets no GitHub**:
+   - `SUPABASE_URL`
+   - `SUPABASE_ANON_KEY`
+2. **Ative GitHub Actions** no repositório
+3. **Pronto!** Executa automaticamente a cada 6 dias
+
+📖 **Guias completos**:
+- [SETUP_RAPIDO_SUPABASE.md](SETUP_RAPIDO_SUPABASE.md) - Setup em 3 passos
+- [SUPABASE_KEEP_ALIVE.md](SUPABASE_KEEP_ALIVE.md) - Documentação completa
+
+**Benefícios:**
+- 💰 100% gratuito
+- 🤖 Totalmente automatizado
+- 🌐 Site sempre online
+- 🔄 Sem manutenção
+
+## �📞 Integração WhatsApp
 
 - Envio automático de pedidos
 - Formatação profissional da mensagem

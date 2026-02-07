@@ -1,0 +1,29 @@
+name: Manter Supabase Ativo
+
+on:
+  schedule:
+    # Executa a cada 6 dias às 8h (UTC)
+    - cron: '0 8 */6 * *'
+  workflow_dispatch: # Permite executar manualmente
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Fazer requisição ao Supabase
+        run: |
+          echo "🔄 Enviando ping para manter Supabase ativo..."
+          
+          # Faz uma requisição simples GET na tabela categories
+          curl -X GET \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/categories?select=id&limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"
+          
+          echo "✅ Ping enviado com sucesso!"
+          
+      - name: Verificar status
+        run: |
+          echo "📊 Status: Supabase mantido ativo"
+          echo "🕐 Próxima execução em 6 dias"

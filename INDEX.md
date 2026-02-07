@@ -65,6 +65,23 @@
 
 ---
 
+## 🔄 Para Manter Supabase Sempre Ativo (GRÁTIS)
+
+### 🔄 **[SUPABASE_KEEP_ALIVE.md](SUPABASE_KEEP_ALIVE.md)**
+**Tempo:** 5 minutos para configurar  
+**Para:** Evitar que projeto Supabase pause por inatividade  
+**Seções:**
+1. Problema do pause automático
+2. Solução grátis com GitHub Actions
+3. Setup em 3 passos
+4. Verificar funcionamento
+5. Alternativas gratuitas (Cron-job, UptimeRobot)
+6. Troubleshooting
+
+**👉 Use este se:** Você quer que o site fique sempre online sem pagar
+
+---
+
 ## 📊 Para Visualizar Arquitetura
 
 ### 📊 **[PIX_DIAGRAMS.md](PIX_DIAGRAMS.md)**
@@ -145,6 +162,9 @@ COMEÇAR AQUI
      │
      ├─ Precisa configurar banco?
      │  └─ [DATABASE_SETUP.md](DATABASE_SETUP.md) 🗄️
+     │
+     ├─ Quer manter DB ativo grátis?
+     │  └─ [SUPABASE_KEEP_ALIVE.md](SUPABASE_KEEP_ALIVE.md) 🔄
      │
      ├─ Prefere visualizações?
      │  └─ [PIX_DIAGRAMS.md](PIX_DIAGRAMS.md) 📊
@@ -229,6 +249,9 @@ COMEÇAR AQUI
 ### "Como configurar o Supabase?"
 → [DATABASE_SETUP.md](DATABASE_SETUP.md)
 
+### "Como evitar que Supabase pause?"
+→ [SUPABASE_KEEP_ALIVE.md](SUPABASE_KEEP_ALIVE.md)
+
 ### "Qual é a estrutura de pastas?"
 → [PIX_README.md](PIX_README.md#-arquivos-principais)
 
@@ -279,13 +302,14 @@ Se não achar resposta:
 
 ## 📊 Estatísticas da Documentação
 
-- **Total de documentos:** 7
-- **Total de páginas:** ~100
-- **Tempo de leitura total:** ~140 minutos
+- **Total de documentos:** 8
+- **Total de páginas:** ~110
+- **Tempo de leitura total:** ~145 minutos
 - **Diagramas ASCII:** 7
 - **Casos de teste:** 40+
 - **Formatos de chave PIX:** 4
 - **Exemplos de código:** 50+
+- **Soluções gratuitas:** 4 (GitHub Actions, Cron-job, UptimeRobot, Google Cloud)
 
 ---
 
