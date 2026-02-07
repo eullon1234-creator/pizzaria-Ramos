@@ -9,8 +9,8 @@ export default function Store() {
     return (
         <>
             <Hero />
-            <Testimonials />
             <Menu />
+            <Testimonials />
             <Notification />
             <BackToTop />
         </>
