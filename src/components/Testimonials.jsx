@@ -1,58 +1,43 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Star, Quote } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 export default function Testimonials() {
-    const testimonials = [
-        {
-            id: 1,
-            name: "Maria Silva",
-            avatar: "MS",
-            rating: 5,
-            text: "A melhor pizza da região! Massa fina e crocante, recheio generoso. Virou tradição da família pedir toda sexta-feira!",
-            location: "Novo Amarante"
-        },
-        {
-            id: 2,
-            name: "João Pedro",
-            avatar: "JP",
-            rating: 5,
-            text: "Entrega super rápida e pizza quentinha. O sabor é incomparável, vale cada centavo! Atendimento nota 10.",
-            location: "Centro"
-        },
-        {
-            id: 3,
-            name: "Ana Costa",
-            avatar: "AC",
-            rating: 5,
-            text: "Já experimentei várias pizzarias, mas a Ramos é diferenciada. Ingredientes frescos e aquele gostinho caseiro!",
-            location: "Bairro São José"
-        },
-        {
-            id: 4,
-            name: "Carlos Eduardo",
-            avatar: "CE",
-            rating: 5,
-            text: "Peço pelo menos 2x por semana! A pizza meio a meio é perfeita para quem gosta de variedade. Recomendo demais!",
-            location: "Vila Nova"
-        },
-        {
-            id: 5,
-            name: "Juliana Santos",
-            avatar: "JS",
-            rating: 5,
-            text: "Atendimento impecável e pizza deliciosa! O sistema de pedido pelo site é super prático. Parabéns!",
-            location: "Jardim América"
-        },
-        {
-            id: 6,
-            name: "Roberto Alves",
-            avatar: "RA",
-            rating: 5,
-            text: "Melhor custo-benefício da cidade! Pizza grande, saborosa e preço justo. Já indiquei pra todos os amigos!",
-            location: "Novo Amarante"
+    const [testimonials, setTestimonials] = useState([])
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        fetchTestimonials()
+    }, [])
+
+    async function fetchTestimonials() {
+        try {
+            const { data, error } = await supabase
+                .from('testimonials')
+                .select('*')
+                .eq('is_active', true)
+                .order('created_at', { ascending: false })
+                .limit(6)
+
+            if (error) throw error
+            setTestimonials(data || [])
+        } catch (error) {
+            console.error('Erro ao buscar depoimentos:', error)
+        } finally {
+            setLoading(false)
         }
-    ]
+    }
+
+    // Se não houver depoimentos, não mostrar a seção
+    if (!loading && testimonials.length === 0) {
+        return null
+    }
+
+    // Calcular média de avaliações
+    const averageRating = testimonials.length > 0
+        ? (testimonials.reduce((sum, t) => sum + t.rating, 0) / testimonials.length).toFixed(1)
+        : '5.0'
 
     return (
         <section className="py-16 md:py-24 bg-gradient-to-b from-zinc-50 to-white">
@@ -88,10 +73,10 @@ export default function Testimonials() {
                                 <Star key={i} className="w-6 h-6 fill-yellow-400 text-yellow-400" />
                             ))}
                         </div>
-                        <span className="text-2xl font-black text-zinc-900">4.9</span>
+                        <span className="text-2xl font-black text-zinc-900">{averageRating}</span>
                         <span className="text-zinc-500 font-medium">/ 5.0</span>
                         <span className="text-zinc-400">•</span>
-                        <span className="text-zinc-600 font-semibold">+500 avaliações</span>
+                        <span className="text-zinc-600 font-semibold">+{testimonials.length} avaliações</span>
                     </motion.div>
                 </motion.div>
 

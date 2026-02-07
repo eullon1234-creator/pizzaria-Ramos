@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { Plus, Edit, Trash2, Power, Pizza, LayoutDashboard, LogOut, ChevronRight, Clock, MapPin, User, CircleCheck, CheckCircle2, Package, Truck, CircleX, Bell, QrCode, DollarSign, Save, Upload, TrendingUp, Search, MessageCircle, Filter } from 'lucide-react'
+import { Plus, Edit, Trash2, Power, Pizza, LayoutDashboard, LogOut, ChevronRight, Clock, MapPin, User, CircleCheck, CheckCircle2, Package, Truck, CircleX, Bell, QrCode, DollarSign, Save, Upload, TrendingUp, Search, MessageCircle, Filter, Star } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import ProductModal from '../components/ProductModal'
 import CategoryModal from '../components/CategoryModal'
 import PixSettingsModal from '../components/PixSettingsModal'
 import BusinessHoursModal from '../components/BusinessHoursModal'
 import StatsDashboard from '../components/StatsDashboard'
+import TestimonialsModal from '../components/TestimonialsModal'
 
 export default function AdminDashboard() {
     const [view, setView] = useState('stats') // Ver estatísticas primeiro ao entrar na gerência
@@ -18,6 +19,7 @@ export default function AdminDashboard() {
     const [categoryModalOpen, setCategoryModalOpen] = useState(false)
     const [pixModalOpen, setPixModalOpen] = useState(false)
     const [businessHoursModalOpen, setBusinessHoursModalOpen] = useState(false)
+    const [testimonialsModalOpen, setTestimonialsModalOpen] = useState(false)
     const [editingProduct, setEditingProduct] = useState(null)
     const [editingCategory, setEditingCategory] = useState(null)
     const [flavors, setFlavors] = useState([])
@@ -436,6 +438,13 @@ export default function AdminDashboard() {
                     >
                         <Pizza className="w-5 h-5" />
                         Categorias
+                    </button>
+                    <button
+                        onClick={() => setTestimonialsModalOpen(true)}
+                        className="w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all text-zinc-500 hover:text-white hover:bg-white/5"
+                    >
+                        <Star className="w-5 h-5" />
+                        Gerenciar Depoimentos
                     </button>
                     <button
                         onClick={() => setView('pix')}
@@ -1082,6 +1091,13 @@ export default function AdminDashboard() {
                     <BusinessHoursModal
                         isOpen={businessHoursModalOpen}
                         onClose={() => setBusinessHoursModalOpen(false)}
+                    />
+                )}
+
+                {testimonialsModalOpen && (
+                    <TestimonialsModal
+                        isOpen={testimonialsModalOpen}
+                        onClose={() => setTestimonialsModalOpen(false)}
                     />
                 )}
             </main>
