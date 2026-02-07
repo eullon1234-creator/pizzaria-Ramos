@@ -1,6 +1,8 @@
 import React from 'react'
 import Hero from '../components/Hero'
 import WhyChooseUs from '../components/WhyChooseUs'
+import PromoSection from '../components/PromoSection'
+import PhotoGallery from '../components/PhotoGallery'
 import Testimonials from '../components/Testimonials'
 import Menu from '../components/Menu'
 import Notification from '../components/Notification'
@@ -11,7 +13,9 @@ export default function Store() {
         <>
             <Hero />
             <WhyChooseUs />
+            <PromoSection />
             <Menu />
+            <PhotoGallery />
             <Testimonials />
             <Notification />
             <BackToTop />
