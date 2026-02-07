@@ -7,17 +7,20 @@ import PWAPrompt from './components/PWAPrompt'
 import LoadingSpinner from './components/LoadingSpinner'
 import { CartProvider } from './context/CartContext'
 import { UserProvider } from './context/UserContext'
+import { FavoritesProvider } from './context/FavoritesContext'
 
 // Lazy Loading (Code Splitting)
 const Store = lazy(() => import('./pages/Store'))
 const AdminLogin = lazy(() => import('./pages/AdminLogin'))
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
+const OrderHistory = lazy(() => import('./pages/OrderHistory'))
 
 function App() {
   return (
     <UserProvider>
-      <CartProvider>
-        <BrowserRouter>
+      <FavoritesProvider>
+        <CartProvider>
+          <BrowserRouter>
         <div className="min-h-screen bg-zinc-50 flex flex-col">
           <Suspense fallback={<LoadingSpinner />}>
             <Routes>
@@ -58,6 +61,14 @@ function App() {
               </>
             } />
 
+            {/* User Routes */}
+            <Route path="/pedidos" element={
+              <>
+                <Header />
+                <OrderHistory />
+              </>
+            } />
+
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
@@ -72,6 +83,7 @@ function App() {
         </div>
       </BrowserRouter>
     </CartProvider>
+    </FavoritesProvider>
     </UserProvider>
   )
 }

@@ -1,14 +1,18 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { Plus, Info, Pizza, Sparkles, Flame, Star, Eye } from 'lucide-react'
+import { Plus, Info, Pizza, Sparkles, Flame, Star, Eye, Heart } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import SizePicker from './SizePicker'
 import HalfAndHalfModal from './HalfAndHalfModal'
 import { useCart } from '../context/CartContext'
+import { useFavorites } from '../context/FavoritesContext'
+import { useFavorites } from '../context/FavoritesContext'
 
 import MenuSkeleton from './MenuSkeleton'
 
 export default function Menu() {
+    const { addToCart } = useCart()
+    const { isFavorite, toggleFavorite } = useFavorites()
     const [categories, setCategories] = useState([])
     const [products, setProducts] = useState([])
     const [promotions, setPromotions] = useState([])
@@ -267,6 +271,24 @@ export default function Menu() {
                                 }}
                                 className="group bg-gradient-to-br from-white to-zinc-50 rounded-2xl overflow-hidden shadow-md border border-zinc-100 hover:shadow-2xl hover:border-primary/20 transition-all hover:-translate-y-2 relative"
                             >
+                                {/* Botão de Favorito */}
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        toggleFavorite(product.id)
+                                    }}
+                                    className="absolute top-4 right-4 z-20 bg-white/90 backdrop-blur-sm p-2.5 rounded-full shadow-lg hover:bg-white transition-all hover:scale-110 active:scale-95"
+                                    aria-label="Favoritar produto"
+                                >
+                                    <Heart 
+                                        className={`w-5 h-5 transition-all ${
+                                            isFavorite(product.id) 
+                                                ? 'fill-red-500 text-red-500' 
+                                                : 'text-zinc-400 hover:text-red-500'
+                                        }`}
+                                    />
+                                </button>
+
                                 {/* Badges */}
                                 <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
                                     {activeCategory === 'promocao' && isPromo && (

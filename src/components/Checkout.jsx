@@ -436,59 +436,52 @@ export default function Checkout({ isOpen, onClose }) {
         setIsSaving(true)
 
         try {
-            const orderId = generateOrderId()
-            setCurrentOrderId(orderId)
+            // Pegar usuário logado
+            const userStr = localStorage.getItem('user')
+            if (!userStr) {
+                alert('⚠️ Você precisa estar logado para fazer um pedido!')
+                setIsSaving(false)
+                return
+            }
+            const user = JSON.parse(userStr)
 
-            // 1. Save order to Supabase
-            const { error: orderError } = await supabase
+            // Preparar items no formato JSON
+            const orderItems = cart.map(item => ({
+                product_id: item.id,
+                name: item.name,
+                size: item.variation.size,
+                price: item.variation.price,
+                quantity: item.quantity
+            }))
+
+            // Salvar pedido no banco
+            const { data: orderData, error: orderError } = await supabase
                 .from('orders')
                 .insert({
-                    id: orderId,
-                    user_name: formData.nome,
-                    user_phone: formData.whatsapp,
-                    delivery_address: {
-                        street: formData.endereco,
-                        number: formData.numero,
-                        neighborhood: formData.bairro,
-                        reference: formData.pontoReferencia,
-                        location_link: formData.locationLink
-                    },
-                    delivery_type: formData.tipoEntrega,
-                    scheduled_time: formData.horarioAgendado,
-                    subtotal: cartTotal,
-                    delivery_fee: 0,
-                    total: cartTotal,
-                    status: 'pendente',
+                    user_id: user.id,
+                    customer_name: formData.nome,
+                    customer_phone: formData.whatsapp,
+                    customer_address: `${formData.endereco}, ${formData.numero} - ${formData.bairro}${formData.pontoReferencia ? ` (Ref: ${formData.pontoReferencia})` : ''}${formData.locationLink ? ` - ${formData.locationLink}` : ''}`,
+                    items: orderItems,
+                    total_amount: cartTotal,
                     payment_method: formData.paymentMethod,
-                    change_for: formData.needChange ? `Troco para R$ ${formData.changeFor}` : null
+                    payment_change: formData.needChange ? parseFloat(formData.changeFor) : null,
+                    scheduled_delivery: formData.tipoEntrega === 'agendada',
+                    delivery_date: formData.tipoEntrega === 'agendada' ? formData.horarioAgendado.split('T')[0] : null,
+                    delivery_time: formData.tipoEntrega === 'agendada' ? formData.horarioAgendado.split('T')[1] : null,
+                    status: 'pending',
+                    notes: null
                 })
+                .select()
+                .single()
 
-            if (orderError) throw orderError
+            if (orderError) {
+                console.error('❌ Erro ao salvar pedido:', orderError)
+                throw orderError
+            }
 
-            // 2. Save items to order_items
-            const orderItems = cart.map(item => {
-                let productId = item.id
-                if (!item.id.startsWith('half-') && item.id.length > 36) {
-                    productId = item.id.substring(0, 36)
-                }
-
-                return {
-                    order_id: orderId,
-                    flavor_1_id: item.id.startsWith('half-') ? null : productId,
-                    item_type: item.id.startsWith('half-') ? 'meio-a-meio' : 'inteira',
-                    quantity: item.quantity,
-                    price: item.variation.price,
-                    size_label: item.variation.size,
-                    observations: item.name,
-                    product_description: item.description
-                }
-            })
-
-            const { error: itemsError } = await supabase
-                .from('order_items')
-                .insert(orderItems)
-
-            if (itemsError) throw itemsError
+            const orderId = orderData.order_number
+            setCurrentOrderId(orderId)
 
             // 3. Se for PIX, gerar QR Code e aguardar pagamento
             

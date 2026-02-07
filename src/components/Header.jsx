@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Pizza, ShoppingCart, User, LogOut, LogIn } from 'lucide-react'
+import { Pizza, ShoppingCart, User, LogOut, LogIn, Package } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { useUser } from '../context/UserContext'
 import { Link, useNavigate } from 'react-router-dom'
@@ -41,6 +41,14 @@ export default function Header() {
                                 <span className="text-xs text-white/70">Olá,</span>
                                 <span className="text-sm font-bold text-white">{user.name.split(' ')[0]}</span>
                             </div>
+                            <Link
+                                to="/pedidos"
+                                className="flex items-center gap-2 text-sm font-medium hover:text-accent transition-colors bg-white/10 px-3 py-1.5 rounded-full border border-white/20 hover:bg-white/20"
+                                title="Meus Pedidos"
+                            >
+                                <Package className="w-4 h-4" />
+                                <span className="hidden md:inline">Pedidos</span>
+                            </Link>
                             <button
                                 onClick={logout}
                                 className="flex items-center gap-2 text-sm font-medium hover:text-accent transition-colors bg-white/10 px-3 py-1.5 rounded-full border border-white/20 hover:bg-white/20"
