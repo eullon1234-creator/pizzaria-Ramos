@@ -1,12 +1,26 @@
 import React, { useState } from 'react'
-import { X, ShoppingBag, Plus, Minus, Trash2, ArrowRight } from 'lucide-react'
+import { X, ShoppingBag, Plus, Minus, Trash2, ArrowRight, LogIn } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useCart } from '../context/CartContext'
+import { useUser } from '../context/UserContext'
 import Checkout from './Checkout'
+import LoginModal from './LoginModal'
 
 export default function CartDrawer() {
     const { cart, cartTotal, isCartOpen, setIsCartOpen, removeFromCart, updateQuantity } = useCart()
+    const { isLoggedIn } = useUser()
     const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
+    const [loginModalOpen, setLoginModalOpen] = useState(false)
+
+    const handleContinue = () => {
+        if (!isLoggedIn) {
+            // Se não estiver logado, abre modal de login
+            setLoginModalOpen(true)
+        } else {
+            // Se estiver logado, vai pro checkout
+            setIsCheckoutOpen(true)
+        }
+    }
 
     return (
         <>
@@ -94,11 +108,22 @@ export default function CartDrawer() {
                                         <span className="text-zinc-500 font-bold uppercase tracking-widest text-xs">Subtotal</span>
                                         <span className="text-2xl font-black text-primary italic">R$ {cartTotal.toFixed(2)}</span>
                                     </div>
+                                    
+                                    {!isLoggedIn && (
+                                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
+                                            <p className="font-semibold flex items-center gap-2">
+                                                <LogIn size={16} />
+                                                Faça login para continuar
+                                            </p>
+                                            <p className="text-xs mt-1">É rápido! Apenas nome e WhatsApp</p>
+                                        </div>
+                                    )}
+                                    
                                     <button
-                                        onClick={() => setIsCheckoutOpen(true)}
+                                        onClick={handleContinue}
                                         className="w-full bg-primary text-white py-5 rounded-2xl font-black text-lg uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl shadow-primary/20 active:scale-95 transition-all group"
                                     >
-                                        Continuar
+                                        {isLoggedIn ? 'Continuar' : 'Fazer Login'}
                                         <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                                     </button>
                                 </div>
@@ -107,6 +132,18 @@ export default function CartDrawer() {
                     </>
                 )}
             </AnimatePresence>
+
+            {/* Login Modal */}
+            <LoginModal 
+                isOpen={loginModalOpen}
+                onClose={() => {
+                    setLoginModalOpen(false)
+                    // Após fechar o modal de login, se estiver logado, abre checkout
+                    if (isLoggedIn) {
+                        setIsCheckoutOpen(true)
+                    }
+                }}
+            />
 
             <Checkout
                 isOpen={isCheckoutOpen}
