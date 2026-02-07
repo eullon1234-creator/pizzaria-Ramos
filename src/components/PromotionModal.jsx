@@ -42,8 +42,13 @@ export default function PromotionModal({ isOpen, onClose }) {
 
     const fetchActivePromotions = async () => {
         try {
-            // Primeiro desativar promoções expiradas
-            await supabase.rpc('deactivate_expired_promotions').catch(() => {});
+            // Primeiro tentar desativar promoções expiradas (pode falhar se função não existir)
+            try {
+                await supabase.rpc('deactivate_expired_promotions');
+            } catch (rpcError) {
+                // Ignorar erro se função RPC não existir ainda
+                console.log('⚠️ Função deactivate_expired_promotions não encontrada (ignorar)');
+            }
             
             const { data, error } = await supabase
                 .from('promotions')
