@@ -69,8 +69,19 @@ export default function PromotionModal({ isOpen, onClose }) {
     const handleCreatePromotion = async (e) => {
         e.preventDefault();
         
-        if (!selectedProduct) {
-            setError('Selecione um produto');
+        // Validação rigorosa
+        if (!selectedProduct || selectedProduct === '' || selectedProduct === 'undefined') {
+            setError('⚠️ Selecione um produto antes de continuar');
+            return;
+        }
+
+        if (!discountPercentage || discountPercentage < 5 || discountPercentage > 90) {
+            setError('⚠️ Desconto deve estar entre 5% e 90%');
+            return;
+        }
+
+        if (!durationDays || durationDays < 1) {
+            setError('⚠️ Duração deve ser de pelo menos 1 dia');
             return;
         }
 
@@ -83,12 +94,15 @@ export default function PromotionModal({ isOpen, onClose }) {
             endDate.setDate(endDate.getDate() + durationDays);
 
             const promotionData = {
-                product_id: selectedProduct, // UUID string, não precisa parseInt
-                discount_percentage: discountPercentage,
+                product_id: selectedProduct.trim(), // Remove espaços extras
+                discount_percentage: parseInt(discountPercentage),
                 end_date: endDate.toISOString(),
                 is_active: true,
                 created_by: 'Admin'
             };
+
+            // Debug log
+            console.log('📝 Criando promoção:', promotionData);
 
             if (editingPromo) {
                 // Atualizar promoção existente
@@ -97,16 +111,24 @@ export default function PromotionModal({ isOpen, onClose }) {
                     .update(promotionData)
                     .eq('id', editingPromo.id);
 
-                if (error) throw error;
-                setSuccess('Promoção atualizada com sucesso!');
+                if (error) {
+                    console.error('❌ Erro ao atualizar:', error);
+                    throw error;
+                }
+                setSuccess('✅ Promoção atualizada com sucesso!');
             } else {
                 // Criar nova promoção
-                const { error } = await supabase
+                const { error, data } = await supabase
                     .from('promotions')
-                    .insert([promotionData]);
+                    .insert([promotionData])
+                    .select();
 
-                if (error) throw error;
-                setSuccess('Promoção criada com sucesso!');
+                if (error) {
+                    console.error('❌ Erro ao criar:', error);
+                    throw error;
+                }
+                console.log('✅ Promoção criada:', data);
+                setSuccess('✅ Promoção criada com sucesso!');
             }
 
             // Resetar formulário
@@ -232,21 +254,34 @@ export default function PromotionModal({ isOpen, onClose }) {
                                 {/* Selecionar Produto */}
                                 <div>
                                     <label className="block text-sm font-bold text-zinc-700 mb-2">
-                                        Produto
+                                        Produto *
                                     </label>
                                     <select
                                         value={selectedProduct}
-                                        onChange={(e) => setSelectedProduct(e.target.value)}
-                                        className="w-full px-4 py-3 border-2 border-zinc-200 rounded-lg focus:border-primary focus:outline-none"
+                                        onChange={(e) => {
+                                            console.log('🔄 Produto selecionado:', e.target.value);
+                                            setSelectedProduct(e.target.value);
+                                            setError(''); // Limpar erro ao selecionar
+                                        }}
+                                        className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${
+                                            selectedProduct 
+                                                ? 'border-green-400 focus:border-green-500 bg-green-50' 
+                                                : 'border-zinc-200 focus:border-primary'
+                                        }`}
                                         required
                                     >
-                                        <option value="">Selecione um produto...</option>
+                                        <option value="">-- Selecione um produto --</option>
                                         {products.map((product) => (
                                             <option key={product.id} value={product.id}>
                                                 {product.name}
                                             </option>
                                         ))}
                                     </select>
+                                    {!selectedProduct && (
+                                        <p className="text-xs text-zinc-500 mt-1">
+                                            ⚠️ Escolha o produto que receberá o desconto
+                                        </p>
+                                    )}
                                 </div>
 
                                 {/* Percentual de Desconto */}
