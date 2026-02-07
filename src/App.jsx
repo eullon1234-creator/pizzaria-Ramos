@@ -6,6 +6,7 @@ import FloatingCart from './components/FloatingCart'
 import PWAPrompt from './components/PWAPrompt'
 import LoadingSpinner from './components/LoadingSpinner'
 import { CartProvider } from './context/CartContext'
+import { UserProvider } from './context/UserContext'
 
 // Lazy Loading (Code Splitting)
 const Store = lazy(() => import('./pages/Store'))
@@ -14,8 +15,9 @@ const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
 
 function App() {
   return (
-    <CartProvider>
-      <BrowserRouter>
+    <UserProvider>
+      <CartProvider>
+        <BrowserRouter>
         <div className="min-h-screen bg-zinc-50 flex flex-col">
           <Suspense fallback={<LoadingSpinner />}>
             <Routes>
@@ -70,6 +72,7 @@ function App() {
         </div>
       </BrowserRouter>
     </CartProvider>
+    </UserProvider>
   )
 }
 
