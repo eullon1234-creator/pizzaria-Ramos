@@ -90,9 +90,30 @@ export default function Menu() {
     // Se tiver categoria ativa, filtrar por ela, senão mostrar TODOS os produtos
     const filteredProducts = activeCategory === 'all-pizzas'
         ? products.filter(p => pizzaCategoryIds.includes(p.category_id))
-        : activeCategory 
-            ? products.filter(p => p.category_id === activeCategory)
-            : products
+        : activeCategory === 'promocao'
+            ? products.filter(p => {
+                // Produtos em promoção: preço abaixo de R$ 35 ou sabores populares
+                const prices = p.product_prices.map(pp => pp.price)
+                const minPrice = prices.length > 0 ? Math.min(...prices) : 999
+                return p.name.toLowerCase().includes('calabresa') ||
+                       p.name.toLowerCase().includes('mussarela') ||
+                       p.name.toLowerCase().includes('frango') ||
+                       minPrice < 35
+              })
+            : activeCategory 
+                ? products.filter(p => p.category_id === activeCategory)
+                : products
+    
+    // Contar produtos em promoção
+    const promoCount = products.filter(p => {
+        const prices = p.product_prices.map(pp => pp.price)
+        const minPrice = prices.length > 0 ? Math.min(...prices) : 999
+        return p.name.toLowerCase().includes('calabresa') ||
+               p.name.toLowerCase().includes('mussarela') ||
+               p.name.toLowerCase().includes('frango') ||
+               minPrice < 35
+    }).length
+    
     const isPizzaCategory = activeCategory === 'all-pizzas' || !activeCategory
 
     if (loading) return <MenuSkeleton />
@@ -113,6 +134,31 @@ export default function Menu() {
                             }`}
                     >
                         Todos
+                    </motion.button>
+                    
+                    {/* ABA DE PROMOÇÕES - Destaque especial */}
+                    <motion.button
+                        onClick={() => setActiveCategory('promocao')}
+                        whileTap={{ scale: 0.95 }}
+                        whileHover={{ scale: 1.05 }}
+                        className={`relative whitespace-nowrap px-6 py-2 rounded-full font-black transition-all ${activeCategory === 'promocao'
+                            ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-primary shadow-xl shadow-yellow-400/50 scale-110'
+                            : 'bg-gradient-to-r from-yellow-400 to-orange-500 text-primary hover:shadow-lg hover:shadow-yellow-400/30'
+                            }`}
+                    >
+                        <span className="flex items-center gap-2">
+                            🔥 PROMOÇÕES
+                            {promoCount > 0 && (
+                                <span className="bg-primary text-white text-xs font-black px-2 py-0.5 rounded-full">
+                                    {promoCount}
+                                </span>
+                            )}
+                        </span>
+                        {/* Ping animation - bolinha piscando */}
+                        <span className="absolute top-0 right-0 flex h-3 w-3 -mr-1 -mt-1">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                        </span>
                     </motion.button>
                     {categories.map((cat) => (
                         <motion.button
@@ -170,6 +216,12 @@ export default function Menu() {
                         const prices = product.product_prices.map(p => p.price)
                         const minPrice = prices.length > 0 ? Math.min(...prices) : 0
                         
+                        // Produto em promoção
+                        const isPromo = product.name.toLowerCase().includes('calabresa') ||
+                                       product.name.toLowerCase().includes('mussarela') ||
+                                       product.name.toLowerCase().includes('frango') ||
+                                       minPrice < 35
+                        
                         // Lógica simples: produtos mais baratos ou com nome específico são "mais vendidos"
                         const isBestSeller = product.name.toLowerCase().includes('calabresa') || 
                                             product.name.toLowerCase().includes('mussarela') ||
@@ -193,7 +245,17 @@ export default function Menu() {
                             >
                                 {/* Badges */}
                                 <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
-                                    {isBestSeller && (
+                                    {activeCategory === 'promocao' && isPromo && (
+                                        <motion.div
+                                            initial={{ scale: 0, rotate: -20 }}
+                                            animate={{ scale: 1, rotate: 0 }}
+                                            transition={{ delay: index * 0.05 + 0.1, type: "spring" }}
+                                            className="flex items-center gap-1 bg-gradient-to-r from-red-500 via-pink-500 to-red-500 text-white text-xs font-black px-3 py-1.5 rounded-full shadow-xl animate-pulse uppercase"
+                                        >
+                                            ⚡ PROMOÇÃO
+                                        </motion.div>
+                                    )}
+                                    {isBestSeller && activeCategory !== 'promocao' && (
                                         <motion.div
                                             initial={{ scale: 0, rotate: -45 }}
                                             animate={{ scale: 1, rotate: 0 }}
