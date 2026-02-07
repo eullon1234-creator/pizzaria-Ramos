@@ -6,7 +6,9 @@ import TestimonialFormModal from './TestimonialFormModal';
 
 export default function Testimonials() {
     const [testimonials, setTestimonials] = useState([])
-    const [loading, setLoading] = useState(true)  const [formModalOpen, setFormModalOpen] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [formModalOpen, setFormModalOpen] = useState(false);
+    
     useEffect(() => {
         fetchTestimonials()
     }, [])
