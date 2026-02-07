@@ -67,7 +67,7 @@ export default defineConfig({
             name: 'Ver Cardápio',
             short_name: 'Cardápio',
             description: 'Ver cardápio completo',
-            url: '/cardapio',
+            url: '/#menu',
             icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }]
           }
         ]

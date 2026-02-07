@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://pizzaria-ramos.vercel.app/sitemap.xml
