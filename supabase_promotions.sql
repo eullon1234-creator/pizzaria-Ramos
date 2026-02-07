@@ -6,7 +6,7 @@
 -- 1️⃣ Criar tabela de promoções
 CREATE TABLE IF NOT EXISTS promotions (
     id BIGSERIAL PRIMARY KEY,
-    product_id BIGINT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     discount_percentage INTEGER NOT NULL CHECK (discount_percentage > 0 AND discount_percentage <= 100),
     start_date TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     end_date TIMESTAMP WITH TIME ZONE NOT NULL,
