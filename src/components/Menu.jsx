@@ -6,7 +6,6 @@ import SizePicker from './SizePicker'
 import HalfAndHalfModal from './HalfAndHalfModal'
 import { useCart } from '../context/CartContext'
 import { useFavorites } from '../context/FavoritesContext'
-import { useFavorites } from '../context/FavoritesContext'
 
 import MenuSkeleton from './MenuSkeleton'
 
@@ -21,8 +20,6 @@ export default function Menu() {
     const [selectedProduct, setSelectedProduct] = useState(null)
     const [isHalfModalOpen, setIsHalfModalOpen] = useState(false)
     const [pizzaCategoryIds, setPizzaCategoryIds] = useState([])
-
-    const { addToCart } = useCart()
 
     useEffect(() => {
         fetchMenu()
