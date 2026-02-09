@@ -13,7 +13,7 @@ export function FavoritesProvider({ children }) {
 
     const loadFavorites = async () => {
         try {
-            const userStr = localStorage.getItem('user')
+            const userStr = localStorage.getItem('pizzaria_user')
             if (!userStr) {
                 setLoading(false)
                 return
@@ -42,7 +42,7 @@ export function FavoritesProvider({ children }) {
 
     const toggleFavorite = async (productId) => {
         try {
-            const userStr = localStorage.getItem('user')
+            const userStr = localStorage.getItem('pizzaria_user')
             if (!userStr) {
                 alert('⚠️ Você precisa estar logado para favoritar produtos!')
                 return false
