@@ -43,15 +43,15 @@ export default function AdminDashboard() {
         const channel = supabase
             .channel('orders_channel')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, async (payload) => {
-                // Fetch items for the new order to have the complete object
-                const { data: newOrderWithItems } = await supabase
+                // Fetch complete order data
+                const { data: newOrder } = await supabase
                     .from('orders')
-                    .select('*, order_items(*)')
+                    .select('*')
                     .eq('id', payload.new.id)
                     .single()
 
-                if (newOrderWithItems) {
-                    setOrders(prev => [newOrderWithItems, ...prev])
+                if (newOrder) {
+                    setOrders(prev => [newOrder, ...prev])
                     playNotification()
                 }
             })
@@ -223,8 +223,8 @@ export default function AdminDashboard() {
             const { data: prodData } = await supabase.from('products').select('*, product_prices(*)').order('name')
             const { data: orderData } = await supabase
                 .from('orders')
-                .select('*, order_items(*)')
-                .order('sequential_num', { ascending: false })
+                .select('*')
+                .order('created_at', { ascending: false })
 
             setCategories(catData || [])
             setProducts(prodData || [])
@@ -265,17 +265,17 @@ export default function AdminDashboard() {
 
             if (newStatus === 'preparando') {
                 type = 'forno'
-                confirmMsg = `Deseja avisar ${orderInfo.user_name} que o pedido entrou no forno?`
+                confirmMsg = `Deseja avisar ${orderInfo.customer_name} que o pedido entrou no forno?`
             } else if (newStatus === 'entrega') {
                 type = 'saida'
-                confirmMsg = `Deseja avisar ${orderInfo.user_name} que o pedido saiu para entrega?`
+                confirmMsg = `Deseja avisar ${orderInfo.customer_name} que o pedido saiu para entrega?`
             } else if (newStatus === 'pendente') {
                 type = 'recebido'
-                confirmMsg = `Deseja avisar ${orderInfo.user_name} que o pedido foi recebido?`
+                confirmMsg = `Deseja avisar ${orderInfo.customer_name} que o pedido foi recebido?`
             }
 
             if (type && window.confirm(confirmMsg)) {
-                sendWhatsAppMessage(orderInfo.user_phone, orderInfo.user_name, type)
+                sendWhatsAppMessage(orderInfo.customer_phone, orderInfo.customer_name, type)
             }
         }
     }
@@ -373,9 +373,9 @@ export default function AdminDashboard() {
 
     const filteredOrders = orders.filter(order => {
         const matchesSearch =
-            order.user_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            order.user_phone?.includes(searchQuery) ||
-            order.sequential_num?.toString().includes(searchQuery)
+            order.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            order.customer_phone?.includes(searchQuery) ||
+            order.order_number?.toString().includes(searchQuery)
 
         const matchesStatus = statusFilter === 'todos' || order.status === statusFilter
 
@@ -565,7 +565,7 @@ export default function AdminDashboard() {
                                                 <div className="flex items-center gap-4">
                                                     <div className="flex items-center gap-2">
                                                         <Clock className="w-4 h-4" />
-                                                        <span className="text-xs font-black uppercase tracking-[0.2em]">PEDIDO #{order.sequential_num || '...'} • {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                        <span className="text-xs font-black uppercase tracking-[0.2em]">PEDIDO {order.order_number || '...'} • {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                                     </div>
                                                     <div className={`px-3 py-1 bg-white/50 rounded-full text-[10px] font-black uppercase tracking-widest ${getTimerColor(order.created_at, order.status)}`}>
                                                         ⏱️ {getTimeElapsed(order.created_at)}
@@ -581,26 +581,26 @@ export default function AdminDashboard() {
                                                             <User className="w-3 h-3" />
                                                             <span className="text-[10px] font-black uppercase tracking-widest">Cliente</span>
                                                         </div>
-                                                        <p className="font-bold text-zinc-900 leading-tight">{order.user_name}</p>
+                                                        <p className="font-bold text-zinc-900 leading-tight">{order.customer_name}</p>
                                                         <div className="flex items-center gap-2">
-                                                            <p className="text-xs text-secondary font-black">{order.user_phone}</p>
+                                                            <p className="text-xs text-secondary font-black">{order.customer_phone}</p>
                                                             <div className="flex gap-1">
                                                                 <button
-                                                                    onClick={() => sendWhatsAppMessage(order.user_phone, order.user_name, 'recebido')}
+                                                                    onClick={() => sendWhatsAppMessage(order.customer_phone, order.customer_name, 'recebido')}
                                                                     className="p-1.5 bg-amber-100 text-amber-600 rounded-lg hover:bg-amber-200 transition-colors"
                                                                     title="Avisar que recebeu"
                                                                 >
                                                                     <Bell className="w-3 h-3" />
                                                                 </button>
                                                                 <button
-                                                                    onClick={() => sendWhatsAppMessage(order.user_phone, order.user_name, 'forno')}
+                                                                    onClick={() => sendWhatsAppMessage(order.customer_phone, order.customer_name, 'forno')}
                                                                     className="p-1.5 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors"
                                                                     title="Avisar que está no forno"
                                                                 >
                                                                     <MessageCircle className="w-3 h-3" />
                                                                 </button>
                                                                 <button
-                                                                    onClick={() => sendWhatsAppMessage(order.user_phone, order.user_name, 'saida')}
+                                                                    onClick={() => sendWhatsAppMessage(order.customer_phone, order.customer_name, 'saida')}
                                                                     className="p-1.5 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
                                                                     title="Avisar que saiu para entrega"
                                                                 >
@@ -615,41 +615,23 @@ export default function AdminDashboard() {
                                                             <span className="text-[10px] font-black uppercase tracking-widest">Endereço</span>
                                                         </div>
                                                         <p className="text-xs font-medium text-zinc-600 leading-tight">
-                                                            {order.delivery_address.street}, {order.delivery_address.number}<br />
-                                                            {order.delivery_address.neighborhood}
+                                                            {order.customer_address}
                                                         </p>
-                                                        {order.delivery_address.reference && (
-                                                            <p className="text-[10px] text-zinc-400 italic font-medium">Ref: {order.delivery_address.reference}</p>
-                                                        )}
-                                                        {order.delivery_address.location_link && (
-                                                            <a
-                                                                href={order.delivery_address.location_link}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="flex items-center gap-1 text-[10px] text-blue-600 font-bold uppercase mt-1 hover:underline"
-                                                            >
-                                                                <MapPin className="w-3 h-3" />
-                                                                Ver no Mapa
-                                                            </a>
-                                                        )}
                                                     </div>
                                                 </div>
 
                                                 <div className="bg-zinc-50 rounded-2xl p-4 space-y-3">
                                                     <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 border-b border-zinc-100 pb-2 flex justify-between">
                                                         Itens do Pedido
-                                                        <span>{order.order_items?.length || 0} itens</span>
+                                                        <span>{order.items?.length || 0} itens</span>
                                                     </h4>
                                                     <div className="space-y-2">
-                                                        {(order.order_items || []).map((item, idx) => (
+                                                        {(order.items || []).map((item, idx) => (
                                                             <div key={idx} className="flex justify-between items-start gap-4 text-sm">
                                                                 <div className="flex-1">
                                                                     <span className="font-black text-primary mr-2 uppercase tracking-tighter text-xs">{item.quantity}X</span>
-                                                                    <span className="font-bold text-zinc-800 block">{item.observations}</span>
-                                                                    {item.product_description && (
-                                                                        <p className="text-[10px] text-zinc-500 font-medium italic mt-0.5 mb-1 leading-tight">{item.product_description}</p>
-                                                                    )}
-                                                                    <span className="text-[10px] font-black text-secondary px-1 bg-secondary/10 rounded uppercase">{item.size_label}</span>
+                                                                    <span className="font-bold text-zinc-800 block">{item.name}</span>
+                                                                    <span className="text-[10px] font-black text-secondary px-1 bg-secondary/10 rounded uppercase">{item.size}</span>
                                                                 </div>
                                                                 <span className="font-bold text-zinc-500 whitespace-nowrap">R$ {(item.price * item.quantity).toFixed(2)}</span>
                                                             </div>
@@ -664,9 +646,9 @@ export default function AdminDashboard() {
                                                                     {order.payment_method === 'cartao' && '💳 Cartão'}
                                                                     {order.payment_method === 'dinheiro' && '💵 Dinheiro'}
                                                                 </span>
-                                                                {order.change_for && (
+                                                                {order.payment_change && (
                                                                     <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-bold uppercase">
-                                                                        {order.change_for}
+                                                                        Troco: R$ {order.payment_change}
                                                                     </span>
                                                                 )}
                                                             </div>
@@ -675,7 +657,7 @@ export default function AdminDashboard() {
 
                                                         <div className="flex justify-between items-center text-zinc-900 pt-1">
                                                             <span className="text-xs font-black uppercase tracking-widest">Total Geral</span>
-                                                            <span className="text-xl font-black italic text-primary tracking-tighter">R$ {order.total?.toFixed(2)}</span>
+                                                            <span className="text-xl font-black italic text-primary tracking-tighter">R$ {order.total_amount?.toFixed(2)}</span>
                                                         </div>
                                                     </div>
                                                 </div>
