@@ -437,7 +437,7 @@ export default function Checkout({ isOpen, onClose }) {
 
         try {
             // Pegar usuário logado
-            const userStr = localStorage.getItem('user')
+            const userStr = localStorage.getItem('pizzaria_user')
             if (!userStr) {
                 alert('⚠️ Você precisa estar logado para fazer um pedido!')
                 setIsSaving(false)

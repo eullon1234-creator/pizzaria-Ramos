@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Clock, Package, Truck, CheckCircle, XCircle, RefreshCw, Calendar, MapPin, CreditCard, Phone } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useCart } from '../context/CartContext'
+import { useUser } from '../context/UserContext'
 import { useNavigate } from 'react-router-dom'
 
 export default function OrderHistory() {
@@ -10,6 +11,7 @@ export default function OrderHistory() {
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState('all') // 'all', 'pending', 'delivered'
     const { addToCart } = useCart()
+    const { user, isLoggedIn } = useUser()
     const navigate = useNavigate()
 
     useEffect(() => {
@@ -18,13 +20,11 @@ export default function OrderHistory() {
 
     const fetchOrders = async () => {
         try {
-            const userStr = localStorage.getItem('user')
-            if (!userStr) {
-                navigate('/login')
+            if (!isLoggedIn || !user) {
+                alert('Você precisa estar logado para ver seus pedidos')
+                navigate('/')
                 return
             }
-
-            const user = JSON.parse(userStr)
 
             const { data, error } = await supabase
                 .from('orders')
