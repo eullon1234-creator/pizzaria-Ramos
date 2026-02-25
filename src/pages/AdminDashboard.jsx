@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../lib/supabase'
 import { Plus, Edit, Trash2, Power, Pizza, LayoutDashboard, LogOut, ChevronRight, Clock, MapPin, User, CircleCheck, CheckCircle2, Package, Truck, CircleX, Bell, QrCode, DollarSign, Save, Upload, TrendingUp, Search, MessageCircle, Filter, Star, Tag } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -31,6 +32,7 @@ export default function AdminDashboard() {
     const [searchQuery, setSearchQuery] = useState('')
     const [statusFilter, setStatusFilter] = useState('todos')
     const [currentTime, setCurrentTime] = useState(new Date())
+    const [newOrderToast, setNewOrderToast] = useState(null)
 
     const AVAILABLE_SIZES = ['Lata 350ml', '1 Litro', '1.5 Litro', '2 Litros']
     const navigate = useNavigate()
@@ -43,20 +45,23 @@ export default function AdminDashboard() {
         const channel = supabase
             .channel('orders_channel')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, async (payload) => {
-                // Fetch complete order data
-                const { data: newOrder } = await supabase
+                // Fetch complete order data with items
+                const { data: newOrderWithItems } = await supabase
                     .from('orders')
-                    .select('*')
+                    .select('*, order_items(*)')
                     .eq('id', payload.new.id)
                     .single()
 
-                if (newOrder) {
-                    setOrders(prev => [newOrder, ...prev])
-                    playNotification()
+                if (newOrderWithItems) {
+                    setOrders(prev => [newOrderWithItems, ...prev])
+                    playNotification(newOrderWithItems)
                 }
             })
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, (payload) => {
-                setOrders(prev => prev.map(o => o.id === payload.new.id ? payload.new : o))
+                // Merge payload.new preservando order_items (Postgres Changes não inclui joins)
+                setOrders(prev => prev.map(o =>
+                    o.id === payload.new.id ? { ...o, ...payload.new } : o
+                ))
             })
             .subscribe()
 
@@ -131,40 +136,76 @@ export default function AdminDashboard() {
     }
 
     async function fetchPixSettings() {
-        const { data } = await supabase.from('pix_settings').select('*').limit(1).single()
-        if (data) {
-            setPixSettings(data)
-        } else {
+        const defaults = {
+            pix_key: '',
+            qr_code_url: '',
+            is_active: true,
+            holder_name: '',
+            bank_name: '',
+            key_type: 'cpf',
+            city: 'Teresina'
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('store_settings')
+                .select('*')
+                .eq('key', 'pix_config')
+                .single()
+
+            if (error && error.code !== 'PGRST116') throw error
+
+            if (data?.value) {
+                setPixSettings({ ...defaults, ...data.value })
+                return
+            }
+
             // Create default if doesn't exist
-            const { data: newData } = await supabase
-                .from('pix_settings')
+            const { data: newData, error: insertError } = await supabase
+                .from('store_settings')
                 .insert({
-                    pix_key: '',
-                    is_active: true,
-                    holder_name: '',
-                    bank_name: '',
-                    key_type: 'cpf'
+                    key: 'pix_config',
+                    value: defaults
                 })
                 .select()
                 .single()
-            setPixSettings(newData)
+
+            if (insertError) throw insertError
+            setPixSettings(newData?.value ?? defaults)
+        } catch (error) {
+            console.error('Error fetching PIX settings:', error)
         }
     }
 
     const updatePixSettings = async () => {
         if (!pixSettings) return
         setSavingPix(true)
-        const { error } = await supabase
-            .from('pix_settings')
-            .update({
-                pix_key: pixSettings.pix_key,
-                qr_code_url: pixSettings.qr_code_url,
-                is_active: pixSettings.is_active,
-                holder_name: pixSettings.holder_name,
-                bank_name: pixSettings.bank_name,
-                key_type: pixSettings.key_type
-            })
-            .eq('id', pixSettings.id)
+        const payload = {
+            pix_key: pixSettings.pix_key,
+            qr_code_url: pixSettings.qr_code_url,
+            is_active: pixSettings.is_active,
+            holder_name: pixSettings.holder_name,
+            bank_name: pixSettings.bank_name,
+            key_type: pixSettings.key_type,
+            city: pixSettings.city || 'Teresina'
+        }
+
+        let error
+        try {
+            ({ error } = await supabase
+                .from('store_settings')
+                .upsert(
+                    {
+                        key: 'pix_config',
+                        value: payload,
+                        updated_at: new Date()
+                    },
+                    { onConflict: 'key' }
+                ))
+        } catch (err) {
+            console.error('Error saving PIX settings:', err)
+            error = err
+        }
 
         if (!error) {
             alert('✅ Configurações PIX salvas com sucesso!')
@@ -236,12 +277,18 @@ export default function AdminDashboard() {
         }
     }
 
-    const playNotification = () => {
+    const playNotification = (order) => {
         try {
             const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3')
             audio.play()
         } catch (e) {
             console.log('Audio play failed', e)
+        }
+
+        // Exibir toast visual por 8 segundos
+        if (order) {
+            setNewOrderToast(order)
+            setTimeout(() => setNewOrderToast(null), 8000)
         }
     }
 
@@ -390,6 +437,30 @@ export default function AdminDashboard() {
 
     return (
         <div className="min-h-screen bg-zinc-50 flex">
+            {/* Toast: Novo Pedido */}
+            <AnimatePresence>
+                {newOrderToast && (
+                    <motion.div
+                        initial={{ y: -80, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: -80, opacity: 0 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                        className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-zinc-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-zinc-700 cursor-pointer"
+                        onClick={() => { setView('orders'); setNewOrderToast(null) }}
+                    >
+                        <span className="flex h-3 w-3 relative">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+                        </span>
+                        <Bell className="w-5 h-5 text-primary" />
+                        <div className="flex flex-col">
+                            <span className="font-black text-sm uppercase tracking-wide">Novo pedido!</span>
+                            <span className="text-zinc-400 text-xs">{newOrderToast.user_name} • R$ {Number(newOrderToast.total || 0).toFixed(2)}</span>
+                        </div>
+                        <button onClick={(e) => { e.stopPropagation(); setNewOrderToast(null) }} className="ml-2 text-zinc-500 hover:text-white text-lg leading-none">×</button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
             {/* Sidebar (Desktop) */}
             <aside className="w-64 bg-zinc-900 text-white hidden md:flex flex-col border-r-4 border-secondary shrink-0">
                 <div className="p-6 border-b border-zinc-800">
