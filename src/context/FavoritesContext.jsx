@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
 const FavoritesContext = createContext()
@@ -30,40 +30,36 @@ export function FavoritesProvider({ children }) {
 
             setFavorites((data || []).map(f => f.product_id))
         } catch (error) {
-            console.error('❌ Erro ao carregar favoritos:', error)
+            console.error('Erro ao carregar favoritos:', error)
         } finally {
             setLoading(false)
         }
     }
 
-    const isFavorite = (productId) => {
+    const isFavorite = useCallback((productId) => {
         return favorites.includes(productId)
-    }
+    }, [favorites])
 
     const toggleFavorite = async (productId) => {
         try {
             const userStr = localStorage.getItem('pizzaria_user')
             if (!userStr) {
-                alert('⚠️ Você precisa estar logado para favoritar produtos!')
                 return false
             }
 
             const user = JSON.parse(userStr)
 
             if (isFavorite(productId)) {
-                // Remover dos favoritos
                 const { error } = await supabase
                     .from('favorites')
                     .delete()
-                    .eq('user_id', user.id)
-                    .eq('product_id', productId)
+                    .match({ user_id: user.id, product_id: productId })
 
                 if (error) throw error
 
                 setFavorites(prev => prev.filter(id => id !== productId))
                 return false
             } else {
-                // Adicionar aos favoritos
                 const { error } = await supabase
                     .from('favorites')
                     .insert({
@@ -77,20 +73,15 @@ export function FavoritesProvider({ children }) {
                 return true
             }
         } catch (error) {
-            console.error('❌ Erro ao alternar favorito:', error)
-            if (error.message.includes('duplicate')) {
-                // Já está favoritado, apenas atualizar estado local
+            console.error('Erro ao alternar favorito:', error)
+            if (error.message?.includes('duplicate')) {
                 setFavorites(prev => prev.includes(productId) ? prev : [...prev, productId])
-            } else {
-                alert('Erro ao favoritar produto. Tente novamente.')
             }
             return null
         }
     }
 
-    const getFavoritesCount = () => {
-        return favorites.length
-    }
+    const getFavoritesCount = () => favorites.length
 
     return (
         <FavoritesContext.Provider value={{

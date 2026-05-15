@@ -28,7 +28,7 @@ export function UserProvider({ children }) {
       const cleanPhone = phone.replace(/\D/g, '');
 
       // Buscar usuário existente
-      const { data: existingUser, error: searchError } = await supabase
+            const { data: existingUser } = await supabase
         .from('users')
         .select('*')
         .eq('phone', cleanPhone)

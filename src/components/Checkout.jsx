@@ -2,11 +2,13 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, MapPin, Phone, User, Send, Clock, LocateFixed, Copy, Check, CreditCard, Save, Info, DollarSign, RefreshCw, Timer, ShoppingBag } from 'lucide-react'
 import { useCart } from '../context/CartContext'
+import { useUser } from '../context/UserContext'
 import { supabase } from '../lib/supabase'
 import { generateDynamicPixQRCode } from '../lib/pixQRCode'
 
 export default function Checkout({ isOpen, onClose }) {
     const { cart, cartTotal, clearCart } = useCart()
+    const { user } = useUser()
     const [isSaving, setIsSaving] = useState(false)
     const [isLoadingLocation, setIsLoadingLocation] = useState(false)
     const [orderSuccess, setOrderSuccess] = useState(false)
@@ -41,7 +43,7 @@ export default function Checkout({ isOpen, onClose }) {
     })
     const [errors, setErrors] = useState({})
 
-    const PIZZARIA_WHATSAPP = "5586994471909"
+    const PIZZARIA_WHATSAPP = import.meta.env.VITE_WHATSAPP_NUMBER || "5586994471909"
     const STORAGE_KEY = 'pizzaria_ramos_customer_data'
 
     // Validation logic
@@ -104,22 +106,23 @@ export default function Checkout({ isOpen, onClose }) {
 
     // Timer de expiração do PIX
     useEffect(() => {
-        if (showPaymentPending && pixTimeLeft > 0 && !pixExpired) {
-            pixTimerRef.current = setInterval(() => {
-                setPixTimeLeft(prev => {
-                    if (prev <= 1) {
-                        clearInterval(pixTimerRef.current)
-                        setPixExpired(true)
-                        return 0
-                    }
-                    return prev - 1
-                })
-            }, 1000)
-        }
+        if (!showPaymentPending || pixExpired || pixTimeLeft <= 0) return
+
+        pixTimerRef.current = setInterval(() => {
+            setPixTimeLeft(prev => {
+                if (prev <= 1) {
+                    clearInterval(pixTimerRef.current)
+                    setPixExpired(true)
+                    return 0
+                }
+                return prev - 1
+            })
+        }, 1000)
+
         return () => {
             if (pixTimerRef.current) clearInterval(pixTimerRef.current)
         }
-    }, [showPaymentPending, pixExpired])
+    }, [showPaymentPending, pixExpired, pixTimeLeft])
 
     const formatTimer = (seconds) => {
         const min = Math.floor(seconds / 60).toString().padStart(2, '0')
@@ -127,11 +130,11 @@ export default function Checkout({ isOpen, onClose }) {
         return `${min}:${sec}`
     }
 
-    const startPixTimer = () => {
+    const startPixTimer = useCallback(() => {
         if (pixTimerRef.current) clearInterval(pixTimerRef.current)
         setPixExpired(false)
         setPixTimeLeft(PIX_EXPIRATION_SECONDS)
-    }
+    }, [])
 
     const handleRegeneratePixCode = useCallback(async () => {
         if (!pixSettings?.pix_key || !currentOrderId) return
@@ -322,14 +325,7 @@ export default function Checkout({ isOpen, onClose }) {
         return { open: true }
     }
 
-    const generateOrderId = () => {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-        let result = 'RAMOS-'
-        for (let i = 0; i < 4; i++) {
-            result += chars.charAt(Math.floor(Math.random() * chars.length))
-        }
-        return result
-    }
+
 
     const handleGetLocation = () => {
         if (!navigator.geolocation) {
@@ -436,14 +432,11 @@ export default function Checkout({ isOpen, onClose }) {
         setIsSaving(true)
 
         try {
-            // Pegar usuário logado
-            const userStr = localStorage.getItem('pizzaria_user')
-            if (!userStr) {
-                alert('⚠️ Você precisa estar logado para fazer um pedido!')
+            if (!user) {
+                alert('Você precisa estar logado para fazer um pedido!')
                 setIsSaving(false)
                 return
             }
-            const user = JSON.parse(userStr)
 
             // Preparar items no formato JSON
             const orderItems = cart.map(item => ({
@@ -588,7 +581,7 @@ export default function Checkout({ isOpen, onClose }) {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        onClick={(e) => {
+                        onClick={() => {
                             // Só fecha se não for pagamento pendente
                             if (!showPaymentPending) {
                                 onClose()

@@ -6,7 +6,7 @@ export default function Hero() {
     return (
         <section className="relative min-h-[500px] md:min-h-[600px] flex items-center justify-center overflow-hidden">
             {/* Background Image with Parallax Effect */}
-            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&q=80&w=2000')] bg-cover bg-center bg-fixed">
+            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&q=80&w=2000')] bg-cover bg-center md:bg-fixed">
                 <div className="absolute inset-0 bg-gradient-to-r from-primary/95 via-primary/80 to-primary/50"></div>
                 {/* Animated Overlay Pattern */}
                 <div className="absolute inset-0 opacity-10">
@@ -79,7 +79,7 @@ export default function Hero() {
                             </a>
                             
                             <a 
-                                href="https://wa.me/5586994471909" 
+                                href={`https://wa.me/${import.meta.env.VITE_WHATSAPP_NUMBER || '5586994471909'}`} 
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="group inline-flex items-center justify-center gap-3 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white font-bold px-8 py-4 rounded-2xl border-2 border-white/40 hover:border-white/60 transition-all hover:scale-105 active:scale-95"

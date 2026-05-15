@@ -66,24 +66,52 @@ export default function ProductModal({ product, categories, onClose, onSave }) {
         }
     }
 
+    const sanitizeInput = (str) => {
+        if (typeof str !== 'string') return str
+        return str.replace(/<[^>]*>/g, '').trim()
+    }
+
+    const validateUrl = (url) => {
+        if (!url) return ''
+        try {
+            new URL(url)
+            return url.trim()
+        } catch {
+            return ''
+        }
+    }
+
     const handleSubmit = async (e) => {
         e.preventDefault()
         setLoading(true)
 
         try {
-            // 1. Save/Update Product
+            const sanitizedData = {
+                name: sanitizeInput(formData.name),
+                description: sanitizeInput(formData.description),
+                category_id: formData.category_id,
+                image_url: validateUrl(formData.image_url),
+                is_active: formData.is_active
+            }
+
+            if (!sanitizedData.name) {
+                alert('O nome do produto é obrigatório.')
+                setLoading(false)
+                return
+            }
+
             let productId = product?.id
 
             if (product) {
                 const { error } = await supabase
                     .from('products')
-                    .update(formData)
+                    .update(sanitizedData)
                     .eq('id', product.id)
                 if (error) throw error
             } else {
                 const { data, error } = await supabase
                     .from('products')
-                    .insert([formData])
+                    .insert([sanitizedData])
                     .select()
                 if (error) throw error
                 productId = data[0].id

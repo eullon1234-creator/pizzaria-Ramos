@@ -21,7 +21,6 @@ export default function OrderHistory() {
     const fetchOrders = async () => {
         try {
             if (!isLoggedIn || !user) {
-                alert('Você precisa estar logado para ver seus pedidos')
                 navigate('/')
                 return
             }
@@ -87,19 +86,18 @@ export default function OrderHistory() {
         try {
             const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items
             
-            // Adicionar todos os itens ao carrinho
             items.forEach(item => {
                 const product = {
-                    id: item.product_id || Math.random().toString(),
+                    id: item.product_id || `temp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
                     name: item.name,
                     product_prices: [{ 
-                        id: Math.random().toString(), 
+                        id: `temp-price-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, 
                         size: item.size, 
                         price: item.price 
                     }]
                 }
                 const variation = { 
-                    id: Math.random().toString(), 
+                    id: `temp-var-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, 
                     size: item.size, 
                     price: item.price 
                 }
@@ -109,12 +107,10 @@ export default function OrderHistory() {
                 }
             })
 
-            // Redirecionar para o carrinho
             navigate('/')
             window.scrollTo(0, 0)
         } catch (error) {
-            console.error('❌ Erro ao repetir pedido:', error)
-            alert('Erro ao adicionar itens ao carrinho')
+            console.error('Erro ao repetir pedido:', error)
         }
     }
 

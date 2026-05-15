@@ -224,13 +224,16 @@ export default function HalfAndHalfModal({ isOpen, onClose, products }) {
                                 <Check className="w-4 h-4" />
                             </button>
                         ) : (
-                            step < 3 && selectedSize && (
+                            step === 2 && selectedSize && (
                                 <button
-                                    onClick={handleNext}
+                                    onClick={() => {
+                                        setFlavor1(availableFlavors[0])
+                                        handleNext()
+                                    }}
                                     className="flex items-center gap-2 text-primary font-black uppercase text-xs tracking-widest transition-transform hover:translate-x-1"
-                                    aria-label="Pular para o próximo passo"
+                                    aria-label="Usar primeiro sabor disponível"
                                 >
-                                    Pular
+                                    Usar primeiro disponível
                                     <ChevronRight className="w-4 h-4" />
                                 </button>
                             )

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../lib/supabase'
 import { Plus, Edit, Trash2, Power, Pizza, LayoutDashboard, LogOut, ChevronRight, Clock, MapPin, User, CircleCheck, CheckCircle2, Package, Truck, CircleX, Bell, QrCode, DollarSign, Save, Upload, TrendingUp, Search, MessageCircle, Filter, Star, Tag } from 'lucide-react'
@@ -19,7 +19,6 @@ export default function AdminDashboard() {
     const [loading, setLoading] = useState(true)
     const [modalOpen, setModalOpen] = useState(false)
     const [categoryModalOpen, setCategoryModalOpen] = useState(false)
-    const [pixModalOpen, setPixModalOpen] = useState(false)
     const [businessHoursModalOpen, setBusinessHoursModalOpen] = useState(false)
     const [testimonialsModalOpen, setTestimonialsModalOpen] = useState(false)
     const [promotionModalOpen, setPromotionModalOpen] = useState(false)
@@ -418,16 +417,20 @@ export default function AdminDashboard() {
         window.open(url, '_blank')
     }
 
-    const filteredOrders = orders.filter(order => {
-        const matchesSearch =
-            order.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            order.customer_phone?.includes(searchQuery) ||
-            order.order_number?.toString().includes(searchQuery)
+    const pendingCount = useMemo(() => orders.filter(o => o.status === 'pendente').length, [orders])
 
-        const matchesStatus = statusFilter === 'todos' || order.status === statusFilter
+    const filteredOrders = useMemo(() => {
+        return orders.filter(order => {
+            const matchesSearch =
+                order.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                order.customer_phone?.includes(searchQuery) ||
+                order.order_number?.toString().includes(searchQuery)
 
-        return matchesSearch && matchesStatus
-    })
+            const matchesStatus = statusFilter === 'todos' || order.status === statusFilter
+
+            return matchesSearch && matchesStatus
+        })
+    }, [orders, searchQuery, statusFilter])
 
     if (loading) return (
         <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
@@ -485,9 +488,9 @@ export default function AdminDashboard() {
                     >
                         <Package className="w-5 h-5" />
                         Pedidos
-                        {orders.filter(o => o.status === 'pendente').length > 0 && (
+                        {pendingCount > 0 && (
                             <span className="ml-auto bg-secondary text-primary text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse">
-                                {orders.filter(o => o.status === 'pendente').length}
+                                {pendingCount}
                             </span>
                         )}
                     </button>

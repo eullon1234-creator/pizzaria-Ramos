@@ -13,7 +13,8 @@ import {
     Pizza,
     CreditCard,
     ChevronRight,
-    Filter
+    Filter,
+    XCircle
 } from 'lucide-react'
 
 export default function StatsDashboard() {
@@ -191,14 +192,12 @@ export default function StatsDashboard() {
                     value={`R$ ${stats.totalRevenue.toFixed(2)}`}
                     icon={DollarSign}
                     color="bg-green-500"
-                    detail="+12%"
                 />
                 <StatCard
                     title="Pedidos"
                     value={stats.totalOrders}
                     icon={ShoppingBag}
                     color="bg-primary"
-                    detail="+5%"
                 />
                 <StatCard
                     title="Ticket Médio"
@@ -209,7 +208,7 @@ export default function StatsDashboard() {
                 <StatCard
                     title="Cancelados"
                     value={stats.canceledOrders}
-                    icon={XCircleIcon}
+                    icon={XCircle}
                     color="bg-red-500"
                 />
             </div>
@@ -361,23 +360,4 @@ export default function StatsDashboard() {
     )
 }
 
-function XCircleIcon(props) {
-    return (
-        <svg
-            {...props}
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            <circle cx="12" cy="12" r="10" />
-            <path d="m15 9-6 6" />
-            <path d="m9 9 6 6" />
-        </svg>
-    )
-}
+

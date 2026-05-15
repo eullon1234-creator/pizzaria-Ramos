@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { Plus, Info, Pizza, Sparkles, Flame, Star, Eye, Heart } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -71,12 +71,10 @@ export default function Menu() {
 
             // Optimize image URLs
             const optimizedProds = prods.map(p => {
-                if (p.image_url) {
-                    // Assuming the URL doesn't already have query params.
-                    // A more robust solution would check for existing '?'
-                    p.image_url = `${p.image_url}?width=400&quality=75`
+                if (p.image_url && !p.image_url.includes('?')) {
+                    return { ...p, image_url: `${p.image_url}?width=400&quality=75` }
                 }
-                return p
+                return { ...p }
             })
             setProducts(optimizedProds)
         } catch (error) {
@@ -128,19 +126,25 @@ export default function Menu() {
         return originalPrice * (1 - discountPercentage / 100)
     }
 
-    // Se tiver categoria ativa, filtrar por ela, senão mostrar TODOS os produtos
-    const filteredProducts = activeCategory === 'all-pizzas'
-        ? products.filter(p => pizzaCategoryIds.includes(p.category_id))
-        : activeCategory === 'promocao'
-            ? products.filter(p => getProductPromotion(p.id) !== undefined)
-            : activeCategory 
-                ? products.filter(p => p.category_id === activeCategory)
-                : products
-    
-    // Contar produtos em promoção (baseado em promoções ativas do banco)
-    const promoCount = products.filter(p => getProductPromotion(p.id) !== undefined).length
-    
-    const isPizzaCategory = activeCategory === 'all-pizzas' || !activeCategory
+    const filteredProducts = useMemo(() => {
+        return activeCategory === 'all-pizzas'
+            ? products.filter(p => pizzaCategoryIds.includes(p.category_id))
+            : activeCategory === 'promocao'
+                ? products.filter(p => {
+                    const promo = promotions.find(pr => pr.product_id === p.id && pr.is_active && new Date(pr.end_date) > new Date())
+                    return promo !== undefined
+                })
+                : activeCategory
+                    ? products.filter(p => p.category_id === activeCategory)
+                    : products
+    }, [activeCategory, products, pizzaCategoryIds, promotions])
+
+    const promoCount = useMemo(() => {
+        return products.filter(p => {
+            const promo = promotions.find(pr => pr.product_id === p.id && pr.is_active && new Date(pr.end_date) > new Date())
+            return promo !== undefined
+        }).length
+    }, [products, promotions])
 
     if (loading) return <MenuSkeleton />
 
@@ -372,9 +376,10 @@ export default function Menu() {
                                     <p className="text-zinc-600 text-sm mb-6 line-clamp-2 leading-relaxed">{product.description}</p>
 
                                     <div className="flex items-center gap-3">
-                                        <button 
-                                            onClick={() => {
-                                                alert(`${product.name}\n\n${product.description}\n\nPreço: R$ ${minPrice.toFixed(2)}${product.product_prices.length > 1 ? ' ou mais' : ''}`)
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                setSelectedProduct(product)
                                             }}
                                             className="flex items-center gap-2 text-zinc-500 hover:text-primary transition-colors px-3 py-2 rounded-lg hover:bg-primary/5"
                                             aria-label={`Ver informações de ${product.name}`}
