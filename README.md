@@ -2,6 +2,15 @@
 
 Sistema completo de delivery para pizzaria com painel administrativo, desenvolvido com React + Vite + Supabase.
 
+## 🔗 Acesse o Sistema
+
+O projeto está dividido em **duas aplicações independentes**:
+
+| Aplicação | Link | Descrição |
+|-----------|------|-----------|
+| 🍕 **Client** (Loja) | [https://pizzaria-ramos.vercel.app](https://pizzaria-ramos.vercel.app) | Cardápio online, carrinho e pedidos para clientes |
+| 🔐 **Admin** (Painel) | [https://admin-pizzaria-ramos.vercel.app](https://admin-pizzaria-ramos.vercel.app) | Gestão de pedidos, cardápio e configurações |
+
 ## ✨ Funcionalidades
 
 ### 👥 Para Clientes
@@ -66,8 +75,37 @@ npm install
 VITE_SUPABASE_URL=sua_url_supabase
 VITE_SUPABASE_ANON_KEY=sua_chave_supabase
 
-# Execute o projeto
+# Execute o projeto (modo desenvolvimento - app completa)
 npm run dev
+```
+
+### 🏗️ Estrutura do Projeto
+
+O repositório contém **duas aplicações** que compartilham o mesmo código-fonte:
+
+```
+pizzaria-ramos/
+├── apps/
+│   ├── client/          ← Aplicação do cliente (loja/cardápio)
+│   │   ├── index.html
+│   │   ├── vite.config.js
+│   │   └── src/
+│   │       ├── main.jsx
+│   │       └── App.jsx
+│   └── admin/           ← Aplicação administrativa (painel)
+│       ├── index.html
+│       ├── vite.config.js
+│       └── src/
+│           ├── main.jsx
+│           └── App.jsx
+├── src/                 ← Código compartilhado entre os apps
+│   ├── components/
+│   ├── context/
+│   ├── lib/
+│   └── pages/
+├── public/              ← Assets públicos
+├── package.json
+└── README.md
 ```
 
 ## 🗄️ Estrutura do Banco de Dados
@@ -144,10 +182,22 @@ Desenvolvido para Pizzaria Ramos © 2026
 ## 🛠️ Comandos Úteis
 
 ```bash
-# Desenvolvimento
+# Desenvolvimento (app completa - todas as rotas)
 npm run dev
 
-# Build para produção
+# Desenvolvimento (apenas Client - loja)
+npm run dev:client
+
+# Desenvolvimento (apenas Admin - painel)
+npm run dev:admin
+
+# Build Client (loja para produção)
+npm run build:client
+
+# Build Admin (painel para produção)
+npm run build:admin
+
+# Build de ambos
 npm run build
 
 # Preview da build

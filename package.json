@@ -8,7 +8,11 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "dev:client": "cd apps/client && vite",
+    "dev:admin": "cd apps/admin && vite",
+    "build:client": "cd apps/client && vite build",
+    "build:admin": "cd apps/admin && vite build",
+    "build": "npm run build:client && npm run build:admin",
     "lint": "eslint .",
     "preview": "vite preview"
   },
